@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -118,7 +118,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 /* SEARCH */
 .search-wrap{position:relative;margin-bottom:11px}
 .search-wrap input{padding-left:36px}
-.search-wrap::before{content:"ðŸ”";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.search-wrap::before{content:"🔍";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
 
 /* LIST ITEMS */
 .list-item{padding:12px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
@@ -228,6 +228,20 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 .comm-item .ci-summary{font-size:12px;color:var(--text-2);margin-top:3px}
 .comm-item .ci-followup{font-size:11px;color:var(--gold);margin-top:4px}
 
+@media (max-width:480px){
+  .hdr{padding:9px 10px;gap:8px}
+  .hdr-title h1{font-size:14px}
+  .hdr-title p{font-size:8px;letter-spacing:.8px}
+  .hdr-date{display:none}
+  .role-badge{padding:4px 7px;font-size:9px}
+  .nav-btn{padding:9px 10px;font-size:10px}
+  .screen{padding:10px}
+  .card{padding:12px}
+  .popup{padding:16px 12px;max-height:88vh}
+  .stitle{font-size:15px;gap:8px;flex-wrap:wrap}
+  .toast{white-space:normal;line-height:1.35}
+}
+
 @media print{.hdr,.nav,.no-print{display:none!important}.body{overflow:visible}.screen{display:block!important}}
 </style>
 </head>
@@ -238,7 +252,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <div class="loading-icon">X</div>
   <h2>X-FACTOR</h2>
   <p>Tutoring Business Manager</p>
-  <p id="loadingMsg" style="color:var(--text-3);font-size:11px;margin-top:4px">Loading your dataâ€¦</p>
+  <p id="loadingMsg" style="color:var(--text-3);font-size:11px;margin-top:4px">Loading your data…</p>
   <div class="spinner"></div>
 </div>
 
@@ -251,30 +265,30 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <div class="hdr-right">
     <span class="role-badge" id="roleBadge">Tutor</span>
     <div class="hdr-date" id="hdrDate"></div>
-    <button id="installBtn" onclick="installApp()">â¬‡ï¸ Install</button>
+    <button id="installBtn" onclick="installApp()">⬇️ Install</button>
     <div class="sync-dot" id="syncDot"></div>
   </div>
 </div>
 
 <!-- NAV -->
 <div class="nav">
-  <button class="nav-btn active" onclick="go('dashboard',this)">ðŸ“Š Dashboard</button>
-  <button class="nav-btn" onclick="go('students',this)">ðŸ‘¨â€ðŸŽ“ Students</button>
-  <button class="nav-btn" onclick="go('lessons',this)">ðŸ“… Lessons</button>
-  <button class="nav-btn" onclick="go('marks',this)">ðŸ“ˆ Marks</button>
-  <button class="nav-btn" onclick="go('payments',this)">ðŸ’° Payments</button>
-  <button class="nav-btn" onclick="go('expenses',this)">ðŸ’¸ Expenses</button>
-  <button class="nav-btn" onclick="go('schedule',this)">ðŸ“† Schedule</button>
-  <button class="nav-btn" onclick="go('comms',this)">ðŸ“ Comms</button>
-  <button class="nav-btn" onclick="go('reports',this)">ðŸ§¾ Reports</button>
-  <button class="nav-btn" onclick="go('settings',this)">âš™ï¸ Settings</button>
+  <button class="nav-btn active" onclick="go('dashboard',this)">📊 Dashboard</button>
+  <button class="nav-btn" onclick="go('students',this)">👨‍🎓 Students</button>
+  <button class="nav-btn" onclick="go('lessons',this)">📅 Lessons</button>
+  <button class="nav-btn" onclick="go('marks',this)">📈 Marks</button>
+  <button class="nav-btn" onclick="go('payments',this)">💰 Payments</button>
+  <button class="nav-btn" onclick="go('expenses',this)">💸 Expenses</button>
+  <button class="nav-btn" onclick="go('schedule',this)">📆 Schedule</button>
+  <button class="nav-btn" onclick="go('comms',this)">📝 Comms</button>
+  <button class="nav-btn" onclick="go('reports',this)">🧾 Reports</button>
+  <button class="nav-btn" onclick="go('settings',this)">⚙️ Settings</button>
 </div>
 
 <div class="body">
 
-<!-- â•â•â• DASHBOARD â•â•â• -->
+<!-- ═══ DASHBOARD ═══ -->
 <div class="screen active" id="sc-dashboard">
-  <div class="stitle">ðŸ“Š Dashboard</div>
+  <div class="stitle">📊 Dashboard</div>
   <div class="stats-grid">
     <div class="stat red"><div class="n" id="d-students">0</div><div class="l">Active Students</div></div>
     <div class="stat gold"><div class="n" id="d-sessions">0</div><div class="l">Sessions This Month</div></div>
@@ -289,28 +303,28 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <!-- Alerts -->
   <div id="dashAlerts"></div>
   <div class="card">
-    <div class="card-title">ðŸ“ˆ Monthly Revenue</div>
+    <div class="card-title">📈 Monthly Revenue</div>
     <div class="chart-wrap"><canvas id="chartRevenue"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title">ðŸ“Š Student Performance</div>
+    <div class="card-title">📊 Student Performance</div>
     <div class="chart-wrap-sm"><canvas id="chartMarks"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title">ðŸ… Top Performers</div>
+    <div class="card-title">🏅 Top Performers</div>
     <div id="topPerformers"></div>
   </div>
   <div class="card">
-    <div class="card-title">âš ï¸ Outstanding Payments</div>
+    <div class="card-title">⚠️ Outstanding Payments</div>
     <div id="outstandingList"></div>
   </div>
 </div>
 
-<!-- â•â•â• STUDENTS â•â•â• -->
+<!-- ═══ STUDENTS ═══ -->
 <div class="screen" id="sc-students">
   <div class="stitle">
-    <span>ðŸ‘¨â€ðŸŽ“ Students</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('studentForm')">ï¼‹ Add</button>
+    <span>👨‍🎓 Students</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('studentForm')">+ Add</button>
   </div>
   <!-- Filter -->
   <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px" id="statusFilter">
@@ -319,13 +333,13 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     <span class="badge grey" style="cursor:pointer;padding:6px 13px;font-size:12px" onclick="filterStudents('Inactive')" data-f="Inactive">Inactive</span>
   </div>
   <div class="card" style="padding:13px;margin-bottom:10px">
-    <div class="search-wrap" style="margin:0"><input id="stuSearch" placeholder="Search studentsâ€¦" oninput="renderStudents()"></div>
+    <div class="search-wrap" style="margin:0"><input id="stuSearch" placeholder="Search students…" oninput="renderStudents()"></div>
   </div>
   <div id="studentList"></div>
   <!-- Add/Edit form -->
   <div id="studentForm" style="display:none">
     <div class="card">
-      <div class="card-title" id="studentFormTitle">âž• Add Student</div>
+      <div class="card-title" id="studentFormTitle">➕ Add Student</div>
       <div class="row-2">
         <div class="fg"><label>Student ID</label><input id="sf-id" placeholder="Auto-generated" readonly style="opacity:.5"></div>
         <div class="fg"><label>Full Name *</label><input id="sf-name" placeholder="e.g. Thabo Nkosi"></div>
@@ -360,21 +374,21 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
         <div class="fg"><label>Email</label><input id="sf-email" placeholder="parent@email.com"></div>
         <div class="fg"><label>Start Date</label><input id="sf-start" type="date"></div>
       </div>
-      <div class="fg"><label>Notes</label><textarea id="sf-notes" placeholder="Any notesâ€¦"></textarea></div>
+      <div class="fg"><label>Notes</label><textarea id="sf-notes" placeholder="Any notes…"></textarea></div>
       <input type="hidden" id="sf-editId">
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('studentForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="saveStudent()">âœ… Save Student</button>
+        <button class="btn btn-red" style="flex:2" onclick="saveStudent()">✅ Save Student</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• LESSONS â•â•â• -->
+<!-- ═══ LESSONS ═══ -->
 <div class="screen" id="sc-lessons">
   <div class="stitle">
-    <span>ðŸ“… Lesson Log</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('lessonForm')">ï¼‹ Log</button>
+    <span>📅 Lesson Log</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('lessonForm')">+ Log</button>
   </div>
   <div class="stats-grid-3" style="margin-bottom:13px">
     <div class="stat red"><div class="n" id="l-total">0</div><div class="l">Total Lessons</div></div>
@@ -383,7 +397,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   </div>
   <div class="card" style="padding:13px;margin-bottom:10px">
     <div class="row-2" style="gap:8px;margin:0">
-      <div class="search-wrap" style="margin:0"><input id="lessonSearch" placeholder="Searchâ€¦" oninput="renderLessons()"></div>
+      <div class="search-wrap" style="margin:0"><input id="lessonSearch" placeholder="Search…" oninput="renderLessons()"></div>
       <select id="lessonFilter" onchange="renderLessons()" style="padding:11px;border:1.5px solid var(--border);border-radius:var(--r-s);background:var(--navy-2);color:var(--text);font-family:Poppins;font-size:13px;outline:none">
         <option value="">All Students</option>
       </select>
@@ -393,11 +407,11 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <!-- Log lesson form -->
   <div id="lessonForm" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ“… Log Lesson</div>
+      <div class="card-title">📅 Log Lesson</div>
       <div class="row-2">
         <div class="fg"><label>Date *</label><input id="lf-date" type="date"></div>
         <div class="fg"><label>Student *</label>
-          <select id="lf-student"><option value="">Select studentâ€¦</option></select>
+          <select id="lf-student"><option value="">Select student…</option></select>
         </div>
       </div>
       <div class="row-2">
@@ -412,27 +426,27 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
           <option>Cancelled</option>
         </select>
       </div>
-      <div class="fg"><label>Topics Covered</label><textarea id="lf-topics" placeholder="What was taught todayâ€¦"></textarea></div>
+      <div class="fg"><label>Topics Covered</label><textarea id="lf-topics" placeholder="What was taught today…"></textarea></div>
       <div class="row-2">
         <div class="fg"><label>Homework Set</label><input id="lf-hwset" placeholder="e.g. Chapter 5 Ex 3"></div>
         <div class="fg"><label>Homework Done?</label>
           <select id="lf-hwdone"><option>Yes</option><option>No</option><option>Partial</option><option>N/A</option></select>
         </div>
       </div>
-      <div class="fg"><label>Notes</label><input id="lf-notes" placeholder="Any notesâ€¦"></div>
+      <div class="fg"><label>Notes</label><input id="lf-notes" placeholder="Any notes…"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('lessonForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="saveLesson()">âœ… Save Lesson</button>
+        <button class="btn btn-red" style="flex:2" onclick="saveLesson()">✅ Save Lesson</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• MARKS â•â•â• -->
+<!-- ═══ MARKS ═══ -->
 <div class="screen" id="sc-marks">
   <div class="stitle">
-    <span>ðŸ“ˆ Marks</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('markForm')">ï¼‹ Add</button>
+    <span>📈 Marks</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('markForm')">+ Add</button>
   </div>
   <div class="card" style="padding:13px;margin-bottom:10px">
     <div class="row-2" style="gap:8px;margin:0">
@@ -448,11 +462,11 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <!-- Add mark form -->
   <div id="markForm" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ“ˆ Add Mark</div>
+      <div class="card-title">📈 Add Mark</div>
       <div class="row-2">
         <div class="fg"><label>Date *</label><input id="mf-date" type="date"></div>
         <div class="fg"><label>Student *</label>
-          <select id="mf-student"><option value="">Selectâ€¦</option></select>
+          <select id="mf-student"><option value="">Select…</option></select>
         </div>
       </div>
       <div class="row-2">
@@ -469,20 +483,20 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
         </div>
         <div class="fg"><label>Mark (%)</label><input id="mf-mark" type="number" min="0" max="100" placeholder="e.g. 78"></div>
       </div>
-      <div class="fg"><label>Notes</label><input id="mf-notes" placeholder="Any notesâ€¦"></div>
+      <div class="fg"><label>Notes</label><input id="mf-notes" placeholder="Any notes…"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('markForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="saveMark()">âœ… Save Mark</button>
+        <button class="btn btn-red" style="flex:2" onclick="saveMark()">✅ Save Mark</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• PAYMENTS â•â•â• -->
+<!-- ═══ PAYMENTS ═══ -->
 <div class="screen" id="sc-payments">
   <div class="stitle">
-    <span>ðŸ’° Payments</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('payForm')">ï¼‹ Invoice</button>
+    <span>💰 Payments</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('payForm')">+ Invoice</button>
   </div>
   <div class="stats-grid">
     <div class="stat green"><div class="n" id="p-received">R0</div><div class="l">Received This Month</div></div>
@@ -492,7 +506,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   </div>
   <div class="card" style="padding:13px;margin-bottom:10px">
     <div class="row-2" style="gap:8px;margin:0">
-      <div class="search-wrap" style="margin:0"><input id="paySearch" placeholder="Searchâ€¦" oninput="renderPayments()"></div>
+      <div class="search-wrap" style="margin:0"><input id="paySearch" placeholder="Search…" oninput="renderPayments()"></div>
       <select id="payStatusFilter" onchange="renderPayments()" style="padding:11px;border:1.5px solid var(--border);border-radius:var(--r-s);background:var(--navy-2);color:var(--text);font-family:Poppins;font-size:13px;outline:none">
         <option value="">All Status</option>
         <option>Paid</option><option>Outstanding</option><option>Overdue</option><option>Partial</option>
@@ -503,11 +517,11 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <!-- Invoice form -->
   <div id="payForm" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ’° New Invoice / Payment</div>
+      <div class="card-title">💰 New Invoice / Payment</div>
       <div class="row-2">
         <div class="fg"><label>Invoice No.</label><input id="pf-inv" placeholder="Auto-generated" readonly style="opacity:.5"></div>
         <div class="fg"><label>Student *</label>
-          <select id="pf-student"><option value="">Selectâ€¦</option></select>
+          <select id="pf-student"><option value="">Select…</option></select>
         </div>
       </div>
       <div class="row-2">
@@ -518,7 +532,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
         <div class="fg"><label>Payment Date</label><input id="pf-date" type="date"></div>
         <div class="fg"><label>Payment Method</label>
           <select id="pf-method">
-            <option>Cash</option><option>EFT</option><option>Card</option><option>â€”</option>
+            <option>Cash</option><option>EFT</option><option>Card</option><option>—</option>
           </select>
         </div>
       </div>
@@ -530,35 +544,35 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
           </select>
         </div>
       </div>
-      <div class="fg"><label>Notes</label><input id="pf-notes" placeholder="Any notesâ€¦"></div>
+      <div class="fg"><label>Notes</label><input id="pf-notes" placeholder="Any notes…"></div>
       <input type="hidden" id="pf-editId">
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('payForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="savePayment()">âœ… Save</button>
+        <button class="btn btn-red" style="flex:2" onclick="savePayment()">✅ Save</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• EXPENSES â•â•â• -->
+<!-- ═══ EXPENSES ═══ -->
 <div class="screen" id="sc-expenses">
   <div class="stitle">
-    <span>ðŸ’¸ Expenses</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('expForm')">ï¼‹ Add</button>
+    <span>💸 Expenses</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('expForm')">+ Add</button>
   </div>
   <div class="stats-grid">
     <div class="stat red"><div class="n" id="e-total">R0</div><div class="l">Total This Month</div></div>
     <div class="stat gold"><div class="n" id="e-ytd">R0</div><div class="l">Year to Date</div></div>
   </div>
   <div class="card">
-    <div class="card-title">ðŸ’¸ By Category</div>
+    <div class="card-title">💸 By Category</div>
     <div class="chart-wrap-sm"><canvas id="chartExpenses"></canvas></div>
   </div>
   <div id="expenseList"></div>
   <!-- Expense form -->
   <div id="expForm" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ’¸ Add Expense</div>
+      <div class="card-title">💸 Add Expense</div>
       <div class="row-2">
         <div class="fg"><label>Date *</label><input id="ef-date" type="date"></div>
         <div class="fg"><label>Amount (R) *</label><input id="ef-amount" type="number" min="0" placeholder="e.g. 250"></div>
@@ -574,19 +588,19 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
           <select id="ef-receipt"><option>Yes</option><option>No</option></select>
         </div>
       </div>
-      <div class="fg"><label>Description</label><input id="ef-desc" placeholder="What was this forâ€¦"></div>
-      <div class="fg"><label>Notes</label><input id="ef-notes" placeholder="Any notesâ€¦"></div>
+      <div class="fg"><label>Description</label><input id="ef-desc" placeholder="What was this for…"></div>
+      <div class="fg"><label>Notes</label><input id="ef-notes" placeholder="Any notes…"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('expForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="saveExpense()">âœ… Save Expense</button>
+        <button class="btn btn-red" style="flex:2" onclick="saveExpense()">✅ Save Expense</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• SCHEDULE â•â•â• -->
+<!-- ═══ SCHEDULE ═══ -->
 <div class="screen" id="sc-schedule">
-  <div class="stitle">ðŸ“† Weekly Schedule</div>
+  <div class="stitle">📆 Weekly Schedule</div>
   <div class="card" style="padding:14px">
     <div class="schedule-grid">
       <table class="schedule-table" id="scheduleTable">
@@ -605,32 +619,32 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     </div>
   </div>
   <div class="card">
-    <div class="card-title">âž• Add Time Slot</div>
+    <div class="card-title">➕ Add Time Slot</div>
     <div class="row-3">
-      <div class="fg"><label>Time</label><input id="sch-time" placeholder="e.g. 14:00â€“15:00"></div>
+      <div class="fg"><label>Time</label><input id="sch-time" placeholder="e.g. 14:00–15:00"></div>
       <div class="fg"><label>Day</label>
         <select id="sch-day">
           <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option>
         </select>
       </div>
       <div class="fg"><label>Student</label>
-        <select id="sch-student"><option value="">Selectâ€¦</option></select>
+        <select id="sch-student"><option value="">Select…</option></select>
       </div>
     </div>
-    <button class="btn btn-red" onclick="saveSlot()">âž• Add Slot</button>
+    <button class="btn btn-red" onclick="saveSlot()">➕ Add Slot</button>
   </div>
 </div>
 
-<!-- â•â•â• COMMS â•â•â• -->
+<!-- ═══ COMMS ═══ -->
 <div class="screen" id="sc-comms">
   <div class="stitle">
-    <span>ðŸ“ Parent Comms</span>
-    <button class="btn btn-red btn-sm" onclick="showForm('commForm')">ï¼‹ Log</button>
+    <span>📝 Parent Comms</span>
+    <button class="btn btn-red btn-sm" onclick="showForm('commForm')">+ Log</button>
   </div>
   <div class="tab-row">
-    <div class="tab active" onclick="commTab('log',this)">ðŸ“‹ Log</div>
-    <div class="tab" onclick="commTab('broadcast',this)">ðŸ“£ Broadcast</div>
-    <div class="tab" onclick="commTab('followup',this)">â° Follow-Up</div>
+    <div class="tab active" onclick="commTab('log',this)">📋 Log</div>
+    <div class="tab" onclick="commTab('broadcast',this)">📣 Broadcast</div>
+    <div class="tab" onclick="commTab('followup',this)">⏰ Follow-Up</div>
   </div>
   <!-- Log -->
   <div id="comm-log">
@@ -639,7 +653,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   <!-- Broadcast -->
   <div id="comm-broadcast" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ“£ WhatsApp Broadcast</div>
+      <div class="card-title">📣 WhatsApp Broadcast</div>
       <div class="fg"><label>Send To</label>
         <select id="bc-filter" onchange="updateBroadcast()">
           <option value="all">All Parents</option>
@@ -654,38 +668,38 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
       </div>
     </div>
     <div class="card">
-      <div class="card-title">âœï¸ Message</div>
+      <div class="card-title">✏️ Message</div>
       <div class="fg"><label>Template</label>
         <select id="bc-tmpl" onchange="loadCommTemplate()">
-          <option value="invoice">ðŸ’° Invoice Reminder</option>
-          <option value="progress">ðŸ“ˆ Progress Update</option>
-          <option value="session">ðŸ“… Session Reminder</option>
-          <option value="custom">âœï¸ Custom</option>
+          <option value="invoice">💰 Invoice Reminder</option>
+          <option value="progress">📈 Progress Update</option>
+          <option value="session">📅 Session Reminder</option>
+          <option value="custom">✏️ Custom</option>
         </select>
       </div>
       <div class="fg" style="margin-bottom:0"><textarea id="bc-msg" style="height:100px" oninput="updateBroadcast()"></textarea></div>
     </div>
     <div class="card">
-      <div class="card-title">ðŸ‘ï¸ Preview</div>
-      <div style="background:rgba(37,211,102,.05);border-radius:var(--r-s);padding:13px;font-size:13px;line-height:1.6;margin-bottom:13px;border-left:3px solid #25D366;color:var(--text)" id="bcPreview">Your message will appear hereâ€¦</div>
-      <button class="btn btn-wa" onclick="startBroadcast()">ðŸ“² Send via WhatsApp</button>
+      <div class="card-title">👁️ Preview</div>
+      <div style="background:rgba(37,211,102,.05);border-radius:var(--r-s);padding:13px;font-size:13px;line-height:1.6;margin-bottom:13px;border-left:3px solid #25D366;color:var(--text)" id="bcPreview">Your message will appear here…</div>
+      <button class="btn btn-wa" onclick="startBroadcast()">📲 Send via WhatsApp</button>
     </div>
   </div>
   <!-- Follow-up -->
   <div id="comm-followup" style="display:none">
     <div class="card">
-      <div class="card-title">â° Pending Follow-Ups</div>
+      <div class="card-title">⏰ Pending Follow-Ups</div>
       <div id="followupList"></div>
     </div>
   </div>
   <!-- Log comm form -->
   <div id="commForm" style="display:none">
     <div class="card">
-      <div class="card-title">ðŸ“ Log Communication</div>
+      <div class="card-title">📝 Log Communication</div>
       <div class="row-2">
         <div class="fg"><label>Date *</label><input id="cf-date" type="date"></div>
         <div class="fg"><label>Student *</label>
-          <select id="cf-student"><option value="">Selectâ€¦</option></select>
+          <select id="cf-student"><option value="">Select…</option></select>
         </div>
       </div>
       <div class="row-2">
@@ -696,7 +710,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
         </div>
         <div class="fg"><label>Topic</label><input id="cf-topic" placeholder="e.g. Progress Update"></div>
       </div>
-      <div class="fg"><label>Summary</label><textarea id="cf-summary" placeholder="What was discussedâ€¦"></textarea></div>
+      <div class="fg"><label>Summary</label><textarea id="cf-summary" placeholder="What was discussed…"></textarea></div>
       <div class="row-2">
         <div class="fg"><label>Follow-Up Required?</label>
           <select id="cf-followup"><option>No</option><option>Yes</option></select>
@@ -705,18 +719,18 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
       </div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-ghost" style="flex:1" onclick="hideForm('commForm')">Cancel</button>
-        <button class="btn btn-red" style="flex:2" onclick="saveComm()">âœ… Save</button>
+        <button class="btn btn-red" style="flex:2" onclick="saveComm()">✅ Save</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- â•â•â• REPORTS â•â•â• -->
+<!-- ═══ REPORTS ═══ -->
 <div class="screen" id="sc-reports">
-  <div class="stitle">ðŸ§¾ Reports</div>
+  <div class="stitle">🧾 Reports</div>
   <div class="tab-row">
-    <div class="tab active" onclick="repTab('finance',this)">ðŸ’° Finance</div>
-    <div class="tab" onclick="repTab('student',this)">ðŸ‘¨â€ðŸŽ“ Student</div>
+    <div class="tab active" onclick="repTab('finance',this)">💰 Finance</div>
+    <div class="tab" onclick="repTab('student',this)">👨‍🎓 Student</div>
   </div>
   <!-- Finance report -->
   <div id="rep-finance">
@@ -727,8 +741,8 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     </div>
     <div id="financeReport"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px" class="no-print">
-      <button class="btn btn-ghost" style="flex:1" onclick="window.print()">ðŸ–¨ï¸ Print</button>
-      <button class="btn btn-red" style="flex:1" onclick="exportAll()">ðŸ“¥ Export Excel</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="window.print()">🖨️ Print</button>
+      <button class="btn btn-red" style="flex:1" onclick="exportAll()">📥 Export Excel</button>
     </div>
   </div>
   <!-- Student report -->
@@ -736,7 +750,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     <div class="card no-print">
       <div class="fg"><label>Select Student</label>
         <select id="rep-student" onchange="renderStudentReport()">
-          <option value="">Choose a studentâ€¦</option>
+          <option value="">Choose a student…</option>
         </select>
       </div>
     </div>
@@ -744,20 +758,20 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   </div>
 </div>
 
-<!-- â•â•â• SETTINGS â•â•â• -->
+<!-- ═══ SETTINGS ═══ -->
 <div class="screen" id="sc-settings">
-  <div class="stitle">âš™ï¸ Settings</div>
+  <div class="stitle">⚙️ Settings</div>
   <div class="card">
-    <div class="card-title">ðŸ“¡ Google Sheets Sync</div>
-    <div class="fg"><label>Apps Script URL</label><input id="s-url" placeholder="https://script.google.com/â€¦"></div>
+    <div class="card-title">📡 Google Sheets Sync</div>
+    <div class="fg"><label>Apps Script URL</label><input id="s-url" placeholder="https://script.google.com/…"></div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost" style="flex:1" onclick="testConn()">ðŸ”Œ Test</button>
-      <button class="btn btn-red" style="flex:2" onclick="syncNow()">ðŸ”„ Sync Now</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="testConn()">🔌 Test</button>
+      <button class="btn btn-red" style="flex:2" onclick="syncNow()">🔄 Sync Now</button>
     </div>
     <div id="syncStatus" style="font-size:12px;color:var(--text-3);margin-top:10px;text-align:center"></div>
   </div>
   <div class="card">
-    <div class="card-title">ðŸ’° Rates</div>
+    <div class="card-title">💰 Rates</div>
     <div class="srow">
       <div><div class="sl">Hourly Rate (R)</div><div class="sd">Default per session</div></div>
       <input type="number" id="s-rate" value="150" style="width:80px;padding:7px;border:1.5px solid var(--border);border-radius:8px;background:var(--navy-2);color:var(--text);font-family:Poppins;font-size:14px;text-align:center;outline:none">
@@ -768,14 +782,14 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     </div>
   </div>
   <div class="card">
-    <div class="card-title">ðŸ’¾ Data</div>
+    <div class="card-title">💾 Data</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn btn-red" onclick="exportAll()">ðŸ“¥ Export All to Excel</button>
-      <button class="btn btn-ghost" onclick="syncNow()">ðŸ”„ Sync with Google Sheets</button>
-      <button class="btn btn-danger" onclick="clearData()">ðŸ—‘ï¸ Clear Local Data</button>
+      <button class="btn btn-red" onclick="exportAll()">📥 Export All to Excel</button>
+      <button class="btn btn-ghost" onclick="syncNow()">🔄 Sync with Google Sheets</button>
+      <button class="btn btn-danger" onclick="clearData()">🗑️ Clear Local Data</button>
     </div>
   </div>
-  <button class="btn btn-red" onclick="saveSettings()" style="margin-bottom:24px">ðŸ’¾ Save Settings</button>
+  <button class="btn btn-red" onclick="saveSettings()" style="margin-bottom:24px">💾 Save Settings</button>
 </div>
 
 </div><!-- /body -->
@@ -811,9 +825,9 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 
 
 <script>
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // CONFIG & DEFAULT DATA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 const STORE_KEY = 'xfactorV1';
 const URL_KEY   = 'xfactor_url';
 
@@ -845,9 +859,9 @@ if (!DB.comms) DB.comms = [];
 if (!DB.schedule) DB.schedule = {};
 function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch(e) {} }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // GOOGLE SHEETS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function getUrl() { return localStorage.getItem(URL_KEY) || DB.settings.url || ''; }
 function setSyncDot(s) { const d=document.getElementById('syncDot'); d.className='sync-dot'+(s==='ok'?'':' '+s); }
 
@@ -882,8 +896,8 @@ async function push(action, data) {
 }
 
 async function loadFromSheets() {
-  setLoadMsg('Connecting to Google Sheetsâ€¦'); setSyncDot('syncing');
-  if (!getUrl()) { setSyncDot('error'); setLoadMsg('No URL â€” using local data'); setTimeout(hideLoading,1200); return; }
+  setLoadMsg('Connecting to Google Sheets…'); setSyncDot('syncing');
+  if (!getUrl()) { setSyncDot('error'); setLoadMsg('No URL — using local data'); setTimeout(hideLoading,1200); return; }
   try {
     const data = await apiCall({action:'getAll'});
     if (data.students?.length) DB.students = data.students;
@@ -892,23 +906,23 @@ async function loadFromSheets() {
     if (data.payments?.length) DB.payments = data.payments;
     if (data.expenses?.length) DB.expenses = data.expenses;
     if (data.comms?.length)    DB.comms    = data.comms;
-    saveLocal(); setSyncDot('ok'); setLoadMsg('Ready! âœ…'); setTimeout(hideLoading,600);
+    saveLocal(); setSyncDot('ok'); setLoadMsg('Ready! ✅'); setTimeout(hideLoading,600);
   } catch(e) {
-    setSyncDot('error'); setLoadMsg('Offline â€” using local data');
-    toast('âš ï¸ Working offline','warn'); setTimeout(hideLoading,1200);
+    setSyncDot('error'); setLoadMsg('Offline — using local data');
+    toast('⚠️ Working offline','warn'); setTimeout(hideLoading,1200);
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // HELPERS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function today() { return new Date().toISOString().split('T')[0]; }
 function thisMonth() { return today().substring(0,7); }
 function fmt(n) { return 'R'+Number(n||0).toLocaleString('en-ZA'); }
 function pct(n) { return Math.round(n||0)+'%'; }
 function markColor(m) { return m>=80?'#00D4AA':m>=60?'#F5A623':m>=40?'#E94560':'#C73652'; }
 function symb(m) { return m>=80?'A':m>=70?'B':m>=60?'C':m>=50?'D':m>=40?'E':'F'; }
-function perfFlag(m) { return m>=60?'âœ… Good':m>=40?'âš ï¸ Needs Attention':'âŒ At Risk'; }
+function perfFlag(m) { return m>=60?'✅ Good':m>=40?'⚠️ Needs Attention':'❌ At Risk'; }
 function studentColor(i) { const c=['#E94560','#F5A623','#00D4AA','#4FC3F7','#7C4DFF','#FF6B35','#00BFA5']; return c[i%c.length]; }
 function setLoadMsg(m) { document.getElementById('loadingMsg').textContent=m; }
 
@@ -965,7 +979,7 @@ function populateStudentDropdowns() {
   ['lf-student','mf-student','pf-student','cf-student','sch-student','rep-student'].forEach(id => {
     const el = document.getElementById(id); if(!el) return;
     const cur = el.value;
-    el.innerHTML = (id==='rep-student'?'<option value="">Choose a studentâ€¦</option>':'<option value="">Select studentâ€¦</option>');
+    el.innerHTML = (id==='rep-student'?'<option value="">Choose a student…</option>':'<option value="">Select student…</option>');
     active.forEach(s => { const o=document.createElement('option'); o.value=s.id; o.textContent=s.name; el.appendChild(o); });
     if (cur) el.value = cur;
   });
@@ -974,9 +988,9 @@ function populateStudentDropdowns() {
   const msf = document.getElementById('markStudentFilter'); if(msf){ msf.innerHTML='<option value="">All Students</option>'; DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;msf.appendChild(o);}); }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // NAV
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 let dashCharts={};
 function go(name, btn) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -998,9 +1012,9 @@ startOnboard();
   if(name==='settings')  renderSettings();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // DASHBOARD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderDashboard() {
   const m = thisMonth();
   const activeStudents = DB.students.filter(s=>s.status==='Active').length;
@@ -1035,8 +1049,8 @@ function renderDashAlerts() {
   const lowMark = DB.marks.filter(m=>Number(m.mark||0)<40);
   const el = document.getElementById('dashAlerts'); if(!el) return;
   let html = '';
-  if (overdue.length) html += `<div style="background:var(--red-xl);border:1px solid var(--red-d);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-weight:700;color:var(--red);font-size:13px;margin-bottom:6px">âš ï¸ ${overdue.length} Overdue Payment${overdue.length>1?'s':''}</div>${overdue.slice(0,3).map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(233,69,96,.2)"><span>${p.studentName||p.student}</span><span style="color:var(--red);font-weight:700">${fmt(Number(p.amount||0)-Number(p.paid||0))}</span></div>`).join('')}</div>`;
-  if (lowMark.length) html += `<div style="background:var(--gold-xl);border:1px solid var(--gold-d);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-weight:700;color:var(--gold);font-size:13px;margin-bottom:6px">ðŸ“‰ ${lowMark.length} Student${lowMark.length>1?'s':''} At Risk (below 40%)</div>${[...new Set(lowMark.map(m=>m.studentName))].slice(0,3).map(n=>`<div style="font-size:12px;padding:3px 0;color:var(--gold)">${n}</div>`).join('')}</div>`;
+  if (overdue.length) html += `<div style="background:var(--red-xl);border:1px solid var(--red-d);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-weight:700;color:var(--red);font-size:13px;margin-bottom:6px">⚠️ ${overdue.length} Overdue Payment${overdue.length>1?'s':''}</div>${overdue.slice(0,3).map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(233,69,96,.2)"><span>${p.studentName||p.student}</span><span style="color:var(--red);font-weight:700">${fmt(Number(p.amount||0)-Number(p.paid||0))}</span></div>`).join('')}</div>`;
+  if (lowMark.length) html += `<div style="background:var(--gold-xl);border:1px solid var(--gold-d);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-weight:700;color:var(--gold);font-size:13px;margin-bottom:6px">📉 ${lowMark.length} Student${lowMark.length>1?'s':''} At Risk (below 40%)</div>${[...new Set(lowMark.map(m=>m.studentName))].slice(0,3).map(n=>`<div style="font-size:12px;padding:3px 0;color:var(--gold)">${n}</div>`).join('')}</div>`;
   el.innerHTML = html;
 }
 
@@ -1066,20 +1080,20 @@ function renderMarksChart() {
 function renderTopPerformers() {
   const data = DB.students.map(s=>{ const m=DB.marks.filter(x=>x.studentId===s.id||x.studentName===s.name).map(x=>Number(x.mark||0)).filter(x=>x>0); return{s,avg:m.length?Math.round(m.reduce((a,b)=>a+b,0)/m.length):0}; }).sort((a,b)=>b.avg-a.avg).slice(0,5);
   document.getElementById('topPerformers').innerHTML = data.length
-    ? data.map(({s,avg},i)=>`<div class="list-item"><div style="font-family:'Orbitron';font-size:15px;color:${studentColor(i)};width:20px;font-weight:700">${i+1}</div><div class="avatar" style="background:${studentColor(i)};width:32px;height:32px;font-size:12px">${s.name[0]}</div><div class="info"><div class="nm">${s.name}</div><div class="sub">${s.grade} Â· ${s.subjects}</div></div><div style="text-align:right"><div style="font-family:'Orbitron';font-size:15px;font-weight:700;color:${markColor(avg)}">${avg}%</div><div style="font-size:10px;color:var(--text-3)">${symb(avg)}</div></div></div>`).join('')
+    ? data.map(({s,avg},i)=>`<div class="list-item"><div style="font-family:'Orbitron';font-size:15px;color:${studentColor(i)};width:20px;font-weight:700">${i+1}</div><div class="avatar" style="background:${studentColor(i)};width:32px;height:32px;font-size:12px">${s.name[0]}</div><div class="info"><div class="nm">${s.name}</div><div class="sub">${s.grade} · ${s.subjects}</div></div><div style="text-align:right"><div style="font-family:'Orbitron';font-size:15px;font-weight:700;color:${markColor(avg)}">${avg}%</div><div style="font-size:10px;color:var(--text-3)">${symb(avg)}</div></div></div>`).join('')
     : '<div class="empty" style="padding:20px"><p>No marks recorded yet</p></div>';
 }
 
 function renderOutstandingList() {
   const list = DB.payments.filter(p=>p.status==='Outstanding'||p.status==='Overdue').slice(0,5);
   document.getElementById('outstandingList').innerHTML = list.length
-    ? list.map(p=>`<div class="list-item"><div class="info"><div class="nm">${p.studentName}</div><div class="sub">${p.month||'â€”'} Â· ${p.method||'â€”'}</div></div><div style="text-align:right"><div style="font-weight:700;color:var(--gold)">${fmt(Number(p.amount||0)-Number(p.paid||0))}</div><span class="pill ${p.status.toLowerCase()}">${p.status}</span></div></div>`).join('')
-    : '<div style="text-align:center;padding:14px;color:var(--text-3);font-size:13px">âœ… No outstanding payments</div>';
+    ? list.map(p=>`<div class="list-item"><div class="info"><div class="nm">${p.studentName}</div><div class="sub">${p.month||'—'} · ${p.method||'—'}</div></div><div style="text-align:right"><div style="font-weight:700;color:var(--gold)">${fmt(Number(p.amount||0)-Number(p.paid||0))}</div><span class="pill ${p.status.toLowerCase()}">${p.status}</span></div></div>`).join('')
+    : '<div style="text-align:center;padding:14px;color:var(--text-3);font-size:13px">✅ No outstanding payments</div>';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // STUDENTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 let stuFilter = 'all';
 function filterStudents(f) {
   stuFilter = f;
@@ -1092,7 +1106,7 @@ function renderStudents() {
   let list = DB.students.filter(s=>s.name.toLowerCase().includes(q)||s.subjects?.toLowerCase().includes(q)||s.parent?.toLowerCase().includes(q));
   if (stuFilter!=='all') list = list.filter(s=>s.status===stuFilter);
   const el = document.getElementById('studentList');
-  if (!list.length) { el.innerHTML='<div class="empty"><div class="ei">ðŸ‘¨â€ðŸŽ“</div><h3>No students found</h3></div>'; return; }
+  if (!list.length) { el.innerHTML='<div class="empty"><div class="ei">👨‍🎓</div><h3>No students found</h3></div>'; return; }
   el.innerHTML = list.map((s,i)=>{
     const marks = DB.marks.filter(m=>m.studentId===s.id||m.studentName===s.name).map(m=>Number(m.mark||0)).filter(m=>m>0);
     const avg = marks.length ? Math.round(marks.reduce((a,b)=>a+b,0)/marks.length) : 0;
@@ -1106,17 +1120,17 @@ function renderStudents() {
             <div style="font-weight:800;font-size:15px">${s.name}</div>
             <span class="pill ${s.status.toLowerCase()}">${s.status}</span>
           </div>
-          <div style="font-size:12px;color:var(--text-2);margin-top:3px">${s.grade} Â· ${s.school}</div>
-          <div style="font-size:12px;color:var(--text-3)">ðŸ“š ${s.subjects} Â· ${s.service}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:3px">${s.grade} · ${s.school}</div>
+          <div style="font-size:12px;color:var(--text-3)">📚 ${s.subjects} · ${s.service}</div>
           <div style="display:flex;gap:12px;margin-top:8px;font-size:11px">
-            <span style="color:var(--red)">ðŸ“… ${sessions} sessions</span>
-            <span style="color:${markColor(avg)}">ðŸ“ˆ ${avg||'â€”'}%</span>
-            <span style="color:var(--green)">ðŸ’° ${fmt(paid)}</span>
+            <span style="color:var(--red)">📅 ${sessions} sessions</span>
+            <span style="color:${markColor(avg)}">📈 ${avg||'—'}%</span>
+            <span style="color:var(--green)">💰 ${fmt(paid)}</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editStudent('${s.id}')">âœï¸</button>
-          ${s.phone?`<a href="https://wa.me/${s.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi '+s.parent+'! A quick message from X-Factor Tutoring ðŸ“š')}" target="_blank" onclick="event.stopPropagation()" style="text-align:center;font-size:13px;color:#25D366;text-decoration:none">ðŸ’¬</a>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editStudent('${s.id}')">✏️</button>
+          ${s.phone?`<a href="https://wa.me/${s.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi '+s.parent+'! A quick message from X-Factor Tutoring 📚')}" target="_blank" onclick="event.stopPropagation()" style="text-align:center;font-size:13px;color:#25D366;text-decoration:none">💬</a>`:''}
         </div>
       </div>
     </div>`;
@@ -1133,20 +1147,20 @@ function showStudentDetail(id) {
     <h2>${s.name}</h2>
     <div style="display:flex;justify-content:space-around;margin-bottom:16px">
       <div style="text-align:center"><div style="font-family:'Orbitron';font-size:22px;font-weight:700;color:var(--red)">${lessons.length}</div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase">Sessions</div></div>
-      <div style="text-align:center"><div style="font-family:'Orbitron';font-size:22px;font-weight:700;color:${markColor(avg)}">${avg||'â€”'}%</div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase">Avg Mark</div></div>
+      <div style="text-align:center"><div style="font-family:'Orbitron';font-size:22px;font-weight:700;color:${markColor(avg)}">${avg||'—'}%</div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase">Avg Mark</div></div>
       <div style="text-align:center"><div style="font-family:'Orbitron';font-size:22px;font-weight:700;color:var(--green)">${fmt(payments.reduce((x,p)=>x+Number(p.paid||0),0))}</div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase">Paid</div></div>
     </div>
     <div style="font-size:13px;line-height:2;color:var(--text-2)">
-      <div>ðŸŽ“ ${s.grade} Â· ${s.school}</div>
-      <div>ðŸ“š ${s.subjects}</div>
-      <div>ðŸ“… ${s.days} Â· ${s.service}</div>
-      <div>ðŸ‘¨â€ðŸ‘©â€ðŸ‘§ ${s.parent}</div>
-      <div>ðŸ“ž ${s.phone||'â€”'}</div>
-      ${s.notes?`<div>ðŸ“ ${s.notes}</div>`:''}
+      <div>🎓 ${s.grade} · ${s.school}</div>
+      <div>📚 ${s.subjects}</div>
+      <div>📅 ${s.days} · ${s.service}</div>
+      <div>👨‍👩‍👧 ${s.parent}</div>
+      <div>📞 ${s.phone||'—'}</div>
+      ${s.notes?`<div>📝 ${s.notes}</div>`:''}
     </div>
     <div style="margin-top:14px;display:flex;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}');closeOverlay('studentDetailOverlay')">âœï¸ Edit</button>
-      ${s.phone?`<a href="https://wa.me/${s.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi '+s.parent+'! A message from X-Factor Tutoring ðŸ“š')}" target="_blank" class="btn btn-wa btn-sm" style="text-decoration:none;flex:1;justify-content:center">ðŸ“² WhatsApp</a>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}');closeOverlay('studentDetailOverlay')">✏️ Edit</button>
+      ${s.phone?`<a href="https://wa.me/${s.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi '+s.parent+'! A message from X-Factor Tutoring 📚')}" target="_blank" class="btn btn-wa btn-sm" style="text-decoration:none;flex:1;justify-content:center">📲 WhatsApp</a>`:''}
     </div>`;
   document.getElementById('studentDetailOverlay').classList.add('show');
 }
@@ -1184,13 +1198,13 @@ function editStudent(id) {
   document.getElementById('sf-parent').value=s.parent; document.getElementById('sf-phone').value=s.phone;
   document.getElementById('sf-email').value=s.email||''; document.getElementById('sf-start').value=s.start||'';
   document.getElementById('sf-notes').value=s.notes||''; document.getElementById('sf-editId').value=s.id;
-  document.getElementById('studentFormTitle').textContent='âœï¸ Edit Student';
+  document.getElementById('studentFormTitle').textContent='✏️ Edit Student';
   showForm('studentForm');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // LESSONS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderLessons() {
   const q=(document.getElementById('lessonSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('lessonFilter')?.value||'';
@@ -1201,15 +1215,15 @@ function renderLessons() {
   const hrs=DB.lessons.filter(l=>l.date?.startsWith(m)).reduce((s,l)=>s+Number(l.hours||1),0);
   document.getElementById('l-hours').textContent=hrs+'h';
   const el=document.getElementById('lessonList');
-  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">ðŸ“…</div><h3>No lessons logged</h3><p>Tap ï¼‹ Log to add a session</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">📅</div><h3>No lessons logged</h3><p>Tap + Log to add a session</p></div>';return;}
   el.innerHTML=list.slice(0,50).map(l=>{
     const attColor={Present:'var(--green)',Absent:'var(--red)',Late:'var(--gold)',Cancelled:'var(--text-3)'}[l.attendance]||'var(--text-3)';
     return `<div class="card" style="margin-bottom:8px;padding:13px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div><div style="font-weight:700;font-size:14px">${l.studentName}</div><div style="font-size:12px;color:var(--text-3)">${l.date} Â· ${l.subject} Â· ${l.hours||1}h</div></div>
+        <div><div style="font-weight:700;font-size:14px">${l.studentName}</div><div style="font-size:12px;color:var(--text-3)">${l.date} · ${l.subject} · ${l.hours||1}h</div></div>
         <span style="font-size:12px;font-weight:700;color:${attColor}">${l.attendance}</span>
       </div>
-      ${l.topics?`<div style="font-size:12px;color:var(--text-2);margin-bottom:4px">ðŸ“ ${l.topics}</div>`:''}
+      ${l.topics?`<div style="font-size:12px;color:var(--text-2);margin-bottom:4px">📝 ${l.topics}</div>`:''}
       <div style="display:flex;gap:10px;font-size:11px;color:var(--text-3)">
         ${l.hwSet?`<span>HW: ${l.hwSet}</span>`:''}
         ${l.hwDone&&l.hwDone!=='N/A'?`<span>Done: ${l.hwDone}</span>`:''}
@@ -1231,13 +1245,13 @@ function saveLesson() {
     hwDone:document.getElementById('lf-hwdone').value,
     notes:document.getElementById('lf-notes').value.trim()};
   DB.lessons.push(l); saveLocal(); push('addLesson',l);
-  hideForm('lessonForm'); renderLessons(); toast('Lesson logged âœ…','ok');
+  hideForm('lessonForm'); renderLessons(); toast('Lesson logged ✅','ok');
   ['lf-subject','lf-topics','lf-hwset','lf-notes'].forEach(id=>document.getElementById(id).value='');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // MARKS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderMarks() {
   const sf=document.getElementById('markStudentFilter')?.value||'';
   const subf=document.getElementById('markSubjectFilter')?.value||'';
@@ -1247,16 +1261,16 @@ function renderMarks() {
   const subEl=document.getElementById('markSubjectFilter');
   if(subEl){const cur=subEl.value;subEl.innerHTML='<option value="">All Subjects</option>';subjects.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subEl.appendChild(o);});if(cur)subEl.value=cur;}
   const el=document.getElementById('markList');
-  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">ðŸ“ˆ</div><h3>No marks recorded</h3><p>Tap ï¼‹ Add to record a mark</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">📈</div><h3>No marks recorded</h3><p>Tap + Add to record a mark</p></div>';return;}
   el.innerHTML=list.slice(0,60).map(m=>{
     const mark=Number(m.mark||0);
     return `<div class="card" style="margin-bottom:8px;padding:13px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div><div style="font-weight:700;font-size:14px">${m.studentName}</div><div style="font-size:12px;color:var(--text-3)">${m.date} Â· ${m.subject} Â· ${m.type} Â· ${m.term}</div></div>
+        <div><div style="font-weight:700;font-size:14px">${m.studentName}</div><div style="font-size:12px;color:var(--text-3)">${m.date} · ${m.subject} · ${m.type} · ${m.term}</div></div>
         <div style="text-align:right"><div style="font-family:'Orbitron';font-size:20px;font-weight:700;color:${markColor(mark)}">${mark}%</div><div style="font-size:11px;color:var(--text-3)">${symb(mark)}</div></div>
       </div>
       <div class="mark-bar"><div class="mark-fill" style="width:${mark}%;background:${markColor(mark)}"></div></div>
-      <div style="font-size:11px;color:var(--text-3);margin-top:5px">${perfFlag(mark)}${m.notes?' Â· '+m.notes:''}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:5px">${perfFlag(mark)}${m.notes?' · '+m.notes:''}</div>
     </div>`;
   }).join('');
 }
@@ -1274,13 +1288,13 @@ function saveMark() {
     flag:perfFlag(Number(mark)),
     notes:document.getElementById('mf-notes').value.trim()};
   DB.marks.push(m); saveLocal(); push('addMark',m);
-  hideForm('markForm'); renderMarks(); toast('Mark saved âœ…','ok');
+  hideForm('markForm'); renderMarks(); toast('Mark saved ✅','ok');
   ['mf-subject','mf-mark','mf-notes'].forEach(id=>document.getElementById(id).value='');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // PAYMENTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderPayments() {
   const q=(document.getElementById('paySearch')?.value||'').toLowerCase();
   const sf=document.getElementById('payStatusFilter')?.value||'';
@@ -1295,12 +1309,12 @@ function renderPayments() {
   document.getElementById('p-overdue').textContent=fmt(overdue);
   document.getElementById('p-invoiced').textContent=fmt(invoiced);
   const el=document.getElementById('paymentList');
-  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">ðŸ’°</div><h3>No payments yet</h3><p>Tap ï¼‹ Invoice to create one</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">💰</div><h3>No payments yet</h3><p>Tap + Invoice to create one</p></div>';return;}
   el.innerHTML=list.slice(0,60).map(p=>{
     const bal=Number(p.amount||0)-Number(p.paid||0);
     return `<div class="card" style="margin-bottom:8px;padding:13px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div><div style="font-weight:700;font-size:14px">${p.studentName}</div><div style="font-size:12px;color:var(--text-3)">${p.invoiceNo||'â€”'} Â· ${p.month||p.date||'â€”'} Â· ${p.method||'â€”'}</div></div>
+        <div><div style="font-weight:700;font-size:14px">${p.studentName}</div><div style="font-size:12px;color:var(--text-3)">${p.invoiceNo||'—'} · ${p.month||p.date||'—'} · ${p.method||'—'}</div></div>
         <span class="pill ${p.status?.toLowerCase().replace(' ','-')||'outstanding'}">${p.status||'Outstanding'}</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:13px">
@@ -1309,8 +1323,8 @@ function renderPayments() {
         ${bal>0?`<span style="color:var(--text-2)">Balance: <b style="color:var(--red)">${fmt(bal)}</b></span>`:''}
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="editPayment('${p.id}')">âœï¸ Edit</button>
-        ${p.status!=='Paid'?`<button class="btn btn-green btn-sm" onclick="markPaid('${p.id}')">âœ… Mark Paid</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="editPayment('${p.id}')">✏️ Edit</button>
+        ${p.status!=='Paid'?`<button class="btn btn-green btn-sm" onclick="markPaid('${p.id}')">✅ Mark Paid</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -1336,7 +1350,7 @@ function savePayment() {
   if(editId){const i=DB.payments.findIndex(x=>x.id===editId);DB.payments[i]=p;}
   else DB.payments.push(p);
   saveLocal(); push(editId?'updatePayment':'addPayment',p);
-  hideForm('payForm'); renderPayments(); toast('Payment saved âœ…','ok');
+  hideForm('payForm'); renderPayments(); toast('Payment saved ✅','ok');
   document.getElementById('pf-editId').value='';
 }
 
@@ -1358,12 +1372,12 @@ function editPayment(id) {
 function markPaid(id) {
   const p=DB.payments.find(x=>x.id===id); if(!p) return;
   p.paid=p.amount; p.status='Paid'; p.date=today();
-  saveLocal(); push('updatePayment',p); renderPayments(); toast('Marked as paid âœ…','ok');
+  saveLocal(); push('updatePayment',p); renderPayments(); toast('Marked as paid ✅','ok');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // EXPENSES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderExpenses() {
   const m=thisMonth();
   const monthExp=DB.expenses.filter(e=>e.date?.startsWith(m)).reduce((s,e)=>s+Number(e.amount||0),0);
@@ -1374,11 +1388,11 @@ function renderExpenses() {
   const list=[...DB.expenses].reverse().slice(0,50);
   el.innerHTML=list.length?list.map(e=>`<div class="card" style="margin-bottom:8px;padding:13px">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700;font-size:13px">${e.desc||e.category}</div><div style="font-size:11px;color:var(--text-3)">${e.date} Â· ${e.category}${e.receipt==='Yes'?' Â· ðŸ§¾':''}</div></div>
+      <div><div style="font-weight:700;font-size:13px">${e.desc||e.category}</div><div style="font-size:11px;color:var(--text-3)">${e.date} · ${e.category}${e.receipt==='Yes'?' · 🧾':''}</div></div>
       <div style="font-family:'Orbitron';font-size:16px;font-weight:700;color:var(--red)">${fmt(e.amount)}</div>
     </div>
     ${e.notes?`<div style="font-size:11px;color:var(--text-3);margin-top:5px">${e.notes}</div>`:''}
-  </div>`).join(''):'<div class="empty"><div class="ei">ðŸ’¸</div><h3>No expenses yet</h3></div>';
+  </div>`).join(''):'<div class="empty"><div class="ei">💸</div><h3>No expenses yet</h3></div>';
 }
 
 function renderExpenseChart() {
@@ -1399,14 +1413,14 @@ function saveExpense() {
     receipt:document.getElementById('ef-receipt').value,
     notes:document.getElementById('ef-notes').value.trim()};
   DB.expenses.push(e); saveLocal(); push('addExpense',e);
-  hideForm('expForm'); renderExpenses(); renderExpenseChart(); toast('Expense saved âœ…','ok');
+  hideForm('expForm'); renderExpenses(); renderExpenseChart(); toast('Expense saved ✅','ok');
   ['ef-amount','ef-desc','ef-notes'].forEach(id=>document.getElementById(id).value='');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // SCHEDULE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-const TIME_SLOTS=['08:00â€“09:00','09:00â€“10:00','10:00â€“11:00','11:00â€“12:00','12:00â€“13:00','13:00â€“14:00','14:00â€“15:00','15:00â€“16:00','16:00â€“17:00','17:00â€“18:00'];
+// ════════════════════════════════════════════════
+const TIME_SLOTS=['08:00–09:00','09:00–10:00','10:00–11:00','11:00–12:00','12:00–13:00','13:00–14:00','14:00–15:00','15:00–16:00','16:00–17:00','17:00–18:00'];
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday'];
 
 function renderSchedule() {
@@ -1419,7 +1433,7 @@ function renderSchedule() {
       const val=DB.schedule[key]||'';
       const td=document.createElement('td');
       if(val){td.className='has-student';td.textContent=val;}
-      else{td.style.color='var(--text-3)';td.textContent='â€”';}
+      else{td.style.color='var(--text-3)';td.textContent='—';}
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1433,12 +1447,12 @@ function saveSlot() {
   if(!time||!sId){toast('Select time and student','err');return;}
   const s=DB.students.find(x=>x.id===sId);
   DB.schedule[`${day}_${time}`]=s?.name||''; saveLocal();
-  renderSchedule(); toast('Slot added âœ…','ok');
+  renderSchedule(); toast('Slot added ✅','ok');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // COMMS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function commTab(name, btn) {
   ['log','broadcast','followup'].forEach(t=>{document.getElementById('comm-'+t).style.display='none';});
   document.querySelectorAll('#sc-comms .tab').forEach(b=>b.classList.remove('active'));
@@ -1450,11 +1464,11 @@ function commTab(name, btn) {
 function renderComms() {
   const list=[...DB.comms].reverse().slice(0,40);
   document.getElementById('commList').innerHTML=list.length?list.map(c=>`<div class="comm-item">
-    <div class="ci-top"><div class="ci-name">${c.studentName} <span style="font-size:11px;color:var(--text-3)">Â· ${c.parent||''}</span></div><div class="ci-date">${c.date}</div></div>
-    <div class="ci-topic">${c.method} Â· ${c.topic}</div>
+    <div class="ci-top"><div class="ci-name">${c.studentName} <span style="font-size:11px;color:var(--text-3)">· ${c.parent||''}</span></div><div class="ci-date">${c.date}</div></div>
+    <div class="ci-topic">${c.method} · ${c.topic}</div>
     <div class="ci-summary">${c.summary}</div>
-    ${c.followupRequired==='Yes'&&!c.done?`<div class="ci-followup">â° Follow-up: ${c.followupDate||'â€”'}</div>`:''}
-  </div>`).join(''):'<div class="empty"><div class="ei">ðŸ“</div><h3>No communications logged</h3></div>';
+    ${c.followupRequired==='Yes'&&!c.done?`<div class="ci-followup">⏰ Follow-up: ${c.followupDate||'—'}</div>`:''}
+  </div>`).join(''):'<div class="empty"><div class="ei">📝</div><h3>No communications logged</h3></div>';
 }
 
 function saveComm() {
@@ -1468,23 +1482,23 @@ function saveComm() {
     followupRequired:document.getElementById('cf-followup').value,
     followupDate:document.getElementById('cf-fudate').value,done:false};
   DB.comms.push(c); saveLocal(); push('addComm',c);
-  hideForm('commForm'); renderComms(); toast('Communication logged âœ…','ok');
+  hideForm('commForm'); renderComms(); toast('Communication logged ✅','ok');
 }
 
 function renderFollowUps() {
   const pending=DB.comms.filter(c=>c.followupRequired==='Yes'&&!c.done);
   document.getElementById('followupList').innerHTML=pending.length?pending.map(c=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div><div style="font-weight:700;font-size:13px">${c.studentName}</div><div style="font-size:12px;color:var(--text-3)">${c.topic} Â· Due: ${c.followupDate||'ASAP'}</div></div>
+      <div><div style="font-weight:700;font-size:13px">${c.studentName}</div><div style="font-size:12px;color:var(--text-3)">${c.topic} · Due: ${c.followupDate||'ASAP'}</div></div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-green btn-sm" onclick="doneFollowUp('${c.id}')">âœ…</button>
-        ${DB.students.find(s=>s.id===c.studentId)?.phone?`<a href="https://wa.me/${DB.students.find(s=>s.id===c.studentId)?.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi! Following up from X-Factor Tutoring ðŸ“š')}" target="_blank" class="btn btn-wa btn-sm" style="text-decoration:none">ðŸ’¬</a>`:''}
+        <button class="btn btn-green btn-sm" onclick="doneFollowUp('${c.id}')">✅</button>
+        ${DB.students.find(s=>s.id===c.studentId)?.phone?`<a href="https://wa.me/${DB.students.find(s=>s.id===c.studentId)?.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi! Following up from X-Factor Tutoring 📚')}" target="_blank" class="btn btn-wa btn-sm" style="text-decoration:none">💬</a>`:''}
       </div>
     </div>
-  </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--green);font-size:13px">âœ… No pending follow-ups!</div>';
+  </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--green);font-size:13px">✅ No pending follow-ups!</div>';
 }
 
-function doneFollowUp(id) { const c=DB.comms.find(x=>x.id===id); if(c){c.done=true;saveLocal();renderFollowUps();toast('Follow-up marked done âœ…','ok');} }
+function doneFollowUp(id) { const c=DB.comms.find(x=>x.id===id); if(c){c.done=true;saveLocal();renderFollowUps();toast('Follow-up marked done ✅','ok');} }
 
 // Broadcast
 function getBcastRecipients() {
@@ -1500,14 +1514,14 @@ function getBcastRecipients() {
 }
 
 const COMM_TEMPLATES={
-  invoice:'ðŸ’° Hi! This is a reminder from X-Factor Tutoring that your invoice is due. Please arrange payment at your earliest convenience. Thank you! ðŸ“š',
-  progress:'ðŸ“ˆ Hi! A quick update from X-Factor Tutoring â€” your child is making great progress! Please feel free to reach out if you have any questions. ðŸ“š',
-  session:'ðŸ“… Hi! Just a reminder about your child\'s tutoring session with X-Factor Tutoring. See you soon! ðŸ“š',
+  invoice:'💰 Hi! This is a reminder from X-Factor Tutoring that your invoice is due. Please arrange payment at your earliest convenience. Thank you! 📚',
+  progress:'📈 Hi! A quick update from X-Factor Tutoring — your child is making great progress! Please feel free to reach out if you have any questions. 📚',
+  session:'📅 Hi! Just a reminder about your child\'s tutoring session with X-Factor Tutoring. See you soon! 📚',
   custom:''
 };
 
 function loadCommTemplate() { const t=document.getElementById('bc-tmpl')?.value; document.getElementById('bc-msg').value=COMM_TEMPLATES[t]||''; updateBroadcast(); }
-function updateBroadcast() { const r=getBcastRecipients(); document.getElementById('bcCount').textContent=r.length; const msg=document.getElementById('bc-msg')?.value||''; document.getElementById('bcPreview').textContent=msg||'Your message will appear hereâ€¦'; }
+function updateBroadcast() { const r=getBcastRecipients(); document.getElementById('bcCount').textContent=r.length; const msg=document.getElementById('bc-msg')?.value||''; document.getElementById('bcPreview').textContent=msg||'Your message will appear here…'; }
 let bcQ=[],bcI=0;
 function startBroadcast() {
   const msg=document.getElementById('bc-msg').value.trim(); if(!msg){toast('Enter a message first','err');return;}
@@ -1515,15 +1529,15 @@ function startBroadcast() {
   bcQ=r; bcI=0; sendNext(msg);
 }
 function sendNext(msg) {
-  if(bcI>=bcQ.length){toast('All '+bcQ.length+' sent! âœ…','ok');return;}
+  if(bcI>=bcQ.length){toast('All '+bcQ.length+' sent! ✅','ok');return;}
   const s=bcQ[bcI];
   window.open(`https://wa.me/${s.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank');
-  bcI++; if(bcI<bcQ.length) toast(`${bcI}/${bcQ.length} sent`,'ok'); else toast('All sent! âœ…','ok');
+  bcI++; if(bcI<bcQ.length) toast(`${bcI}/${bcQ.length} sent`,'ok'); else toast('All sent! ✅','ok');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // REPORTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function populateMonthSelect() {
   const el=document.getElementById('rep-month'); if(!el) return;
   el.innerHTML='';
@@ -1552,7 +1566,7 @@ function renderFinanceReport() {
     <div class="report-hdr">
       <div style="font-family:'Orbitron';font-size:28px;font-weight:900;color:var(--red);margin-bottom:4px">X</div>
       <div class="report-title" style="font-family:'Orbitron';font-size:18px;font-weight:900;color:var(--text)">X-FACTOR TUTORING</div>
-      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Finance Report Â· ${label}</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Finance Report · ${label}</div>
     </div>
     <div class="rep-row"><span class="label">Sessions This Month</span><span>${sessions}</span></div>
     <div class="rep-row"><span class="label">Total Invoiced</span><span>${fmt(invoiced)}</span></div>
@@ -1582,7 +1596,7 @@ function renderStudentReport() {
     <div class="report-hdr">
       <div style="font-family:'Orbitron';font-size:20px;font-weight:900;color:var(--red);margin-bottom:6px">X-FACTOR</div>
       <div style="font-weight:800;font-size:18px;color:var(--text)">${s.name}</div>
-      <div style="font-size:12px;color:var(--text-3)">${s.grade} Â· ${s.school}</div>
+      <div style="font-size:12px;color:var(--text-3)">${s.grade} · ${s.school}</div>
       <div style="font-size:11px;color:var(--text-3);margin-top:2px">Generated ${new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'})}</div>
     </div>
     <div style="display:flex;justify-content:space-around;margin-bottom:16px">
@@ -1595,13 +1609,13 @@ function renderStudentReport() {
     <div class="rep-row"><span class="label">Service</span><span>${s.service}</span></div>
     <div class="rep-row"><span class="label">Total Paid</span><span style="color:var(--green)">${fmt(totalPaid)}</span></div>
     ${outstanding>0?`<div class="rep-row"><span class="label">Outstanding</span><span style="color:var(--red)">${fmt(outstanding)}</span></div>`:''}
-    ${marks.length?`<div style="margin-top:14px"><div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px">Recent Marks</div>${[...marks].reverse().slice(0,8).map(m=>`<div class="rep-row"><span class="label">${m.subject} Â· ${m.type} Â· ${m.term}</span><span style="color:${markColor(Number(m.mark||0))};font-weight:700">${m.mark}% (${symb(Number(m.mark||0))})</span></div>`).join('')}</div>`:''}
+    ${marks.length?`<div style="margin-top:14px"><div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px">Recent Marks</div>${[...marks].reverse().slice(0,8).map(m=>`<div class="rep-row"><span class="label">${m.subject} · ${m.type} · ${m.term}</span><span style="color:${markColor(Number(m.mark||0))};font-weight:700">${m.mark}% (${symb(Number(m.mark||0))})</span></div>`).join('')}</div>`:''}
   </div>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // EXPORT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function exportAll() {
   const wb=XLSX.utils.book_new();
   // Students
@@ -1624,12 +1638,12 @@ function exportAll() {
   const er=[['ID','Date','Month','Amount','Category','Description','Receipt','Notes']];
   DB.expenses.forEach(e=>er.push([e.id,e.date,e.month,e.amount,e.category,e.desc,e.receipt,e.notes]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(er),'Expenses');
-  XLSX.writeFile(wb,`XFactor_Export_${today()}.xlsx`); toast('Exported! âœ…','ok');
+  XLSX.writeFile(wb,`XFactor_Export_${today()}.xlsx`); toast('Exported! ✅','ok');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // SETTINGS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 function renderSettings() {
   document.getElementById('s-url').value=getUrl();
   document.getElementById('s-rate').value=DB.settings.rate||150;
@@ -1641,30 +1655,30 @@ function saveSettings() {
   DB.settings.overdueDays=Number(document.getElementById('s-overdue').value)||30;
   DB.settings.role = DB.settings.role || 'admin';
   DB.settings.businessName = DB.settings.businessName || 'X-Factor Tutoring';
-  localStorage.setItem(URL_KEY,DB.settings.url); saveLocal(); toast('Settings saved âœ…','ok');
+  localStorage.setItem(URL_KEY,DB.settings.url); saveLocal(); toast('Settings saved ✅','ok');
 }
 async function testConn() {
   const url=document.getElementById('s-url').value.trim(); if(!url){toast('Enter URL first','err');return;}
-  localStorage.setItem(URL_KEY,url); document.getElementById('syncStatus').textContent='Testingâ€¦';
-  try{await fetch(url+'?action=getAll').then(r=>r.json());document.getElementById('syncStatus').textContent='âœ… Connected!';toast('Connected âœ…','ok');}
-  catch(e){document.getElementById('syncStatus').textContent='âŒ Connection failed';toast('Failed âŒ','err');}
+  localStorage.setItem(URL_KEY,url); document.getElementById('syncStatus').textContent='Testing…';
+  try{await fetch(url+'?action=getAll').then(r=>r.json());document.getElementById('syncStatus').textContent='✅ Connected!';toast('Connected ✅','ok');}
+  catch(e){document.getElementById('syncStatus').textContent='❌ Connection failed';toast('Failed ❌','err');}
 }
-async function syncNow() { toast('Syncingâ€¦','warn'); await loadFromSheets(); flushQueue(); }
+async function syncNow() { toast('Syncing…','warn'); await loadFromSheets(); flushQueue(); }
 function clearData() { if(confirm('Clear all local data? This cannot be undone.')){ localStorage.removeItem(STORE_KEY); DB=defaultDB(); saveLocal(); toast('Data cleared','warn'); } }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // PWA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=document.getElementById('installBtn');if(b)b.style.display='flex';});
-function installApp(){if(!deferredPrompt){toast('Tap â‹® â†’ Add to Home Screen','');return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(c=>{if(c.outcome==='accepted')toast('App installed ðŸŽ‰','ok');deferredPrompt=null;const b=document.getElementById('installBtn');if(b)b.style.display='none';});}
+function installApp(){if(!deferredPrompt){toast('Tap ⋮ → Add to Home Screen','');return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(c=>{if(c.outcome==='accepted')toast('App installed 🎉','ok');deferredPrompt=null;const b=document.getElementById('installBtn');if(b)b.style.display='none';});}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./service-worker.js').catch(()=>{});});}
-window.addEventListener('online',()=>{setSyncDot('ok');flushQueue();toast('Back online â€” syncing','ok');});
-window.addEventListener('offline',()=>{setSyncDot('error');toast('Offline â€” data saved locally','warn');});
+window.addEventListener('online',()=>{setSyncDot('ok');flushQueue();toast('Back online — syncing','ok');});
+window.addEventListener('offline',()=>{setSyncDot('error');toast('Offline — data saved locally','warn');});
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 // INIT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 document.getElementById('hdrDate').innerHTML=new Date().toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'<br>'+new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
 document.getElementById('lf-date').value=today();
 document.getElementById('mf-date').value=today();
@@ -1691,4 +1705,3 @@ const startupFallback = setTimeout(() => {
 </script>
 </body>
 </html>
-
