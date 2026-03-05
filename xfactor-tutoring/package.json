@@ -1,0 +1,22 @@
+﻿{
+  "name": "xfactor-tutoring",
+  "version": "1.0.0",
+  "description": "A complete tutoring business management app built for X-Factor Tutoring.",
+  "main": "index.html",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "sync:android": "npm run build:web && npx cap sync android",
+    "open:android": "npx cap open android",
+    "apk:debug": "npm run sync:android && node scripts/run-gradle.mjs assembleDebug",
+    "apk:release": "npm run sync:android && node scripts/run-gradle.mjs assembleRelease"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0"
+  }
+}

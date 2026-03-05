@@ -74,3 +74,23 @@ A complete tutoring business management app built for X-Factor Tutoring.
 
 ---
 *Built with ❤️ — localStorage + Google Sheets, hosted on GitHub Pages*
+
+## Android APK Build
+
+This project includes Capacitor Android packaging.
+
+### Local debug APK (Windows)
+1. Install JDK 21 and set `JAVA_HOME`
+2. Install Android Studio (SDK + platform tools)
+3. Run:
+   - `npm install`
+   - `npm run apk:debug`
+4. APK output:
+   - `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### GitHub Actions APK
+A workflow is included at `.github/workflows/build-apk.yml`.
+
+1. Push to `master` (or run manually from Actions tab)
+2. Open the `Build APK` workflow run
+3. Download artifact `xfactor-tutoring-debug-apk`
