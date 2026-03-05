@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "xfactor-tutoring-v1";
+const CACHE_NAME = "xfactor-tutoring-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -24,6 +24,19 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const { request } = event;
   if (request.method !== "GET") return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then(networkResponse => {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+          return networkResponse;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then(cached => {

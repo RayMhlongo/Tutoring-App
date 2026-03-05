@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>X-Factor Tutoring</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E94560">
@@ -186,6 +186,13 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 .toast.ok{background:var(--green-xl);border-color:var(--green);color:var(--green)}
 .toast.warn{background:var(--gold-xl);border-color:var(--gold);color:var(--gold)}
 .toast.err{background:var(--red-xl);border-color:var(--red);color:var(--red)}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;border:none;border-radius:50%;z-index:280;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 12px 24px rgba(233,69,96,.35)}
+.fab:active{transform:scale(.95)}
+@media (min-width:900px){.fab{display:none}}
+@media (max-width:420px){
+  .row-2,.row-3,.action-row,.action-row-3{grid-template-columns:1fr}
+  .stats-grid,.stats-grid-3{grid-template-columns:1fr}
+}
 
 /* REPORT */
 .report-hdr{text-align:center;padding:16px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px}
@@ -778,6 +785,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
   </div>
 </div>
 
+<button class="fab" onclick="showForm('studentForm')" aria-label="Add student">+</button>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -823,7 +831,14 @@ function setSyncDot(s) { const d=document.getElementById('syncDot'); d.className
 
 async function apiCall(params) {
   const url = getUrl()+'?'+new URLSearchParams(params);
-  const res = await fetch(url); return res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // Sync queue for offline support
@@ -874,7 +889,13 @@ function symb(m) { return m>=80?'A':m>=70?'B':m>=60?'C':m>=50?'D':m>=40?'E':'F';
 function perfFlag(m) { return m>=60?'âœ… Good':m>=40?'âš ï¸ Needs Attention':'âŒ At Risk'; }
 function studentColor(i) { const c=['#E94560','#F5A623','#00D4AA','#4FC3F7','#7C4DFF','#FF6B35','#00BFA5']; return c[i%c.length]; }
 function setLoadMsg(m) { document.getElementById('loadingMsg').textContent=m; }
-function hideLoading() { const e=document.getElementById('loadingScreen'); e.style.opacity='0'; e.style.transition='opacity .4s'; setTimeout(()=>e.style.display='none',400); }
+function hideLoading() {
+  const e=document.getElementById('loadingScreen');
+  if(!e || e.style.display==='none') return;
+  e.style.opacity='0';
+  e.style.transition='opacity .4s';
+  setTimeout(()=>e.style.display='none',400);
+}
 function showForm(id) { const e=document.getElementById(id); e.style.display='block'; e.scrollIntoView({behavior:'smooth'}); }
 function hideForm(id) { document.getElementById(id).style.display='none'; }
 function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
@@ -1090,7 +1111,7 @@ function saveStudent() {
   else DB.students.push(s);
   saveLocal(); push(editId?'updateStudent':'addStudent',s);
   hideForm('studentForm'); renderStudents(); populateStudentDropdowns();
-  toast(name+(editId?' updated!'>' saved!'),'ok');
+  toast(name + (editId ? ' updated!' : ' saved!'),'ok');
 }
 
 function editStudent(id) {
@@ -1588,7 +1609,22 @@ document.getElementById('pf-date').value=today();
 document.getElementById('ef-date').value=today();
 document.getElementById('cf-date').value=today();
 populateStudentDropdowns();
-loadFromSheets();
+const startupFallback = setTimeout(() => {
+  setLoadMsg('Startup taking long - opening in offline mode');
+  setSyncDot('error');
+  hideLoading();
+}, 7000);
+
+(async () => {
+  try {
+    await loadFromSheets();
+  } catch (e) {
+    setSyncDot('error');
+  } finally {
+    clearTimeout(startupFallback);
+    hideLoading();
+  }
+})();
 </script>
 </body>
 </html>
