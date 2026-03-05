@@ -8,6 +8,9 @@ on:
       - "xfactor-tutoring/**"
       - ".github/workflows/build-apk.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
