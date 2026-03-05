@@ -15,6 +15,9 @@ jobs:
       run:
         working-directory: xfactor-tutoring
 
+    env:
+      npm_config_cache: ${{ github.workspace }}/xfactor-tutoring/.npm-cache
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +34,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Install dependencies
         run: npm ci
