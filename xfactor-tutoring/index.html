@@ -46,6 +46,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 .hdr-title h1{font-family:"Orbitron",sans-serif;font-size:16px;font-weight:900;color:var(--red);letter-spacing:1px}
 .hdr-title p{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-2)}
 .hdr-right{display:flex;align-items:center;gap:8px}
+.role-badge{padding:5px 10px;border-radius:999px;background:rgba(233,69,96,.18);border:1px solid rgba(233,69,96,.45);font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--red)}
 .hdr-date{color:var(--text-2);text-align:right;font-size:10px;font-weight:500}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#00D4AA;box-shadow:0 0 6px #00D4AA;transition:all .3s;flex-shrink:0}
 .sync-dot.syncing{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:blink 1s infinite}
@@ -248,6 +249,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
     <div class="hdr-title"><h1>X-FACTOR</h1><p>Tutoring System</p></div>
   </div>
   <div class="hdr-right">
+    <span class="role-badge" id="roleBadge">Tutor</span>
     <div class="hdr-date" id="hdrDate"></div>
     <button id="installBtn" onclick="installApp()">â¬‡ï¸ Install</button>
     <div class="sync-dot" id="syncDot"></div>
@@ -787,6 +789,26 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 
 <button class="fab" onclick="showForm('studentForm')" aria-label="Add student">+</button>
 <div class="toast" id="toast"></div>
+<div class="overlay" id="onboardOverlay">
+  <div class="popup">
+    <h2>Welcome to X-Factor</h2>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;text-align:center">Set your profile and role for a guided enterprise experience.</p>
+    <div class="fg"><label>Tutor Name</label><input id="obTutorName" placeholder="Your full name"></div>
+    <div class="fg"><label>Business Name</label><input id="obBizName" placeholder="X-Factor Tutoring"></div>
+    <div class="fg"><label>Role Mode</label>
+      <select id="obRole">
+        <option value="admin">Admin</option>
+        <option value="tutor">Tutor</option>
+        <option value="assistant">Assistant</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="skipOnboard()">Skip</button>
+      <button class="btn btn-red" style="flex:2" onclick="finishOnboard()">Start</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -889,6 +911,43 @@ function symb(m) { return m>=80?'A':m>=70?'B':m>=60?'C':m>=50?'D':m>=40?'E':'F';
 function perfFlag(m) { return m>=60?'âœ… Good':m>=40?'âš ï¸ Needs Attention':'âŒ At Risk'; }
 function studentColor(i) { const c=['#E94560','#F5A623','#00D4AA','#4FC3F7','#7C4DFF','#FF6B35','#00BFA5']; return c[i%c.length]; }
 function setLoadMsg(m) { document.getElementById('loadingMsg').textContent=m; }
+
+function applyRoleMode() {
+  const role = (DB.settings.role || 'admin').toUpperCase();
+  const badge = document.getElementById('roleBadge');
+  if (badge) badge.textContent = role;
+  const restricted = role === 'ASSISTANT';
+  const reportsTab = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.textContent.toLowerCase().includes('reports'));
+  if (reportsTab) reportsTab.style.display = restricted ? 'none' : '';
+}
+
+function startOnboard() {
+  if (DB.settings.onboarded) return;
+  const ov = document.getElementById('onboardOverlay');
+  if (!ov) return;
+  document.getElementById('obTutorName').value = DB.settings.tutorName || '';
+  document.getElementById('obBizName').value = DB.settings.businessName || 'X-Factor Tutoring';
+  document.getElementById('obRole').value = DB.settings.role || 'admin';
+  ov.classList.add('show');
+}
+
+function finishOnboard() {
+  DB.settings.tutorName = document.getElementById('obTutorName').value.trim();
+  DB.settings.businessName = document.getElementById('obBizName').value.trim() || 'X-Factor Tutoring';
+  DB.settings.role = document.getElementById('obRole').value;
+  DB.settings.onboarded = true;
+  saveLocal();
+  applyRoleMode();
+  document.getElementById('onboardOverlay').classList.remove('show');
+  toast('Profile ready!','ok');
+}
+
+function skipOnboard() {
+  DB.settings.onboarded = true;
+  saveLocal();
+  applyRoleMode();
+  document.getElementById('onboardOverlay').classList.remove('show');
+}
 function hideLoading() {
   const e=document.getElementById('loadingScreen');
   if(!e || e.style.display==='none') return;
@@ -925,6 +984,8 @@ function go(name, btn) {
   document.getElementById('sc-'+name).classList.add('active');
   btn.classList.add('active');
   populateStudentDropdowns();
+applyRoleMode();
+startOnboard();
   if(name==='dashboard') renderDashboard();
   if(name==='students')  renderStudents();
   if(name==='lessons')   renderLessons();
@@ -1578,6 +1639,8 @@ function saveSettings() {
   DB.settings.url=document.getElementById('s-url').value.trim();
   DB.settings.rate=Number(document.getElementById('s-rate').value)||150;
   DB.settings.overdueDays=Number(document.getElementById('s-overdue').value)||30;
+  DB.settings.role = DB.settings.role || 'admin';
+  DB.settings.businessName = DB.settings.businessName || 'X-Factor Tutoring';
   localStorage.setItem(URL_KEY,DB.settings.url); saveLocal(); toast('Settings saved âœ…','ok');
 }
 async function testConn() {
