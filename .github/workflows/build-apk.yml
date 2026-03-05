@@ -3,7 +3,7 @@
 on:
   workflow_dispatch:
   push:
-    branches: ["master"]
+    branches: ["master", "main"]
     paths:
       - "xfactor-tutoring/**"
       - ".github/workflows/build-apk.yml"
@@ -48,6 +48,15 @@ jobs:
       - name: Build debug APK
         run: |
           npm run sync:android
+          python - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text(encoding="utf-8")
+          if "android.permission.CAMERA" not in text:
+              insert = '\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
+              text = text.replace("</manifest>", insert + "</manifest>")
+              manifest.write_text(text, encoding="utf-8")
+          PY
           chmod +x android/gradlew
           (cd android && ./gradlew assembleDebug)
 
@@ -56,3 +65,15 @@ jobs:
         with:
           name: xfactor-tutoring-debug-apk
           path: xfactor-tutoring/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create Release with APK
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          files: xfactor-tutoring/android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: xfactor-v${{ github.run_number }}
+          release_name: X-Factor Tutoring APK v${{ github.run_number }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
