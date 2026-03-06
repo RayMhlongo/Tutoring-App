@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>X-Factor Tutoring</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E94560">
@@ -27,8 +27,8 @@
   --r:16px; --r-s:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden}
-body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);display:flex;flex-direction:column}
+html,body{height:100%;width:100%;overflow:hidden}
+body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);display:flex;flex-direction:column;min-height:100dvh}
 
 /* LOADING */
 .loading{position:fixed;inset:0;z-index:999;background:linear-gradient(160deg,var(--navy-2),var(--navy-3));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
@@ -40,7 +40,7 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* HEADER */
-.hdr{background:linear-gradient(135deg,var(--navy-3),var(--navy-2));padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:2px solid var(--red);box-shadow:0 4px 20px rgba(233,69,96,.2);z-index:10}
+.hdr{background:linear-gradient(135deg,var(--navy-3),var(--navy-2));padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:2px solid var(--red);box-shadow:0 4px 20px rgba(233,69,96,.2);z-index:10}
 .hdr-brand{display:flex;align-items:center;gap:10px}
 .hdr-logo{width:38px;height:38px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:"Orbitron",sans-serif;font-size:18px;font-weight:900;color:white;box-shadow:0 0 14px rgba(233,69,96,.4);flex-shrink:0}
 .hdr-title h1{font-family:"Orbitron",sans-serif;font-size:16px;font-weight:900;color:var(--red);letter-spacing:1px}
@@ -62,8 +62,8 @@ body{font-family:"Poppins",sans-serif;background:var(--navy);color:var(--text);d
 .nav-btn.active{border-bottom-color:var(--red)}
 
 /* BODY */
-.body{flex:1;overflow-y:auto;overflow-x:hidden}
-.screen{display:none;padding:14px;max-width:600px;margin:0 auto;animation:fadeUp .25s ease}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom)}
+.screen{display:none;padding:14px;max-width:600px;width:100%;margin:0 auto;animation:fadeUp .25s ease}
 .screen.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
