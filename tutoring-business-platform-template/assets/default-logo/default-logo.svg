@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="X-Factor Tutoring">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e3a67"/>
+      <stop offset="100%" stop-color="#1a5c9c"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8d36e"/>
+      <stop offset="100%" stop-color="#f4c44a"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#g1)"/>
+  <circle cx="256" cy="256" r="190" fill="#ffffff" fill-opacity="0.12"/>
+  <path d="M149 141l107 139 108-139h62L286 313l118 156h-61L256 356 168 469h-61l117-156L87 141z" fill="#ffffff"/>
+  <path d="M356 96l17 35 38 5-28 27 7 38-34-18-34 18 7-38-28-27 38-5z" fill="url(#g2)"/>
+</svg>
