@@ -51,6 +51,16 @@ jobs:
       - name: Sync Capacitor web assets
         run: npx cap sync android
 
+      - name: Normalize Android SDK levels for CI
+        run: |
+          sed -i 's/compileSdkVersion = 36/compileSdkVersion = 35/' android/variables.gradle
+          sed -i 's/targetSdkVersion = 36/targetSdkVersion = 35/' android/variables.gradle
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
       - name: Build Debug APK
         run: |
           cd android
