@@ -12,16 +12,20 @@ function renderScheduleFields(fields) {
   `).join("");
 }
 
+function studentLabel(entry) {
+  return entry.studentName || entry.studentLabel || entry.studentId || "";
+}
+
 function renderDayView(entries) {
   return `
     <div class="list">
       ${renderMaybe(entries.length > 0, entries.map((entry) => `
         <div class="list-item">
-          <div class="list-item-main">
-            <div class="list-item-title">${escapeHtml(entry.timeStart || "")} - ${escapeHtml(entry.timeEnd || "")} | ${escapeHtml(entry.subject || "")}</div>
-            <div class="list-item-sub">${escapeHtml(entry.studentId || "")} | ${escapeHtml(entry.category || "")}</div>
+            <div class="list-item-main">
+              <div class="list-item-title">${escapeHtml(entry.timeStart || "")} - ${escapeHtml(entry.timeEnd || "")} | ${escapeHtml(entry.subject || "")}</div>
+              <div class="list-item-sub">${escapeHtml(studentLabel(entry))} | ${escapeHtml(entry.category || "")}</div>
+            </div>
           </div>
-        </div>
       `).join(""), `<div class="empty-state">No schedule items for selected day.</div>`)}
     </div>
   `;
@@ -45,7 +49,7 @@ function renderWeekView(weekDays, entries) {
               <div class="list-item">
                 <div class="list-item-main">
                   <div class="list-item-title">${escapeHtml(entry.timeStart || "")} ${escapeHtml(entry.subject || "")}</div>
-                  <div class="list-item-sub">${escapeHtml(entry.studentId || "")}</div>
+                  <div class="list-item-sub">${escapeHtml(studentLabel(entry))}</div>
                 </div>
               </div>
             `).join(""), `<div class="empty-state">No lessons</div>`)}
@@ -70,7 +74,7 @@ function renderMonthView(monthGrid, entriesByDate) {
               <div class="list-item">
                 <div class="list-item-main">
                   <div class="list-item-title">${escapeHtml(entry.timeStart || "")}</div>
-                  <div class="list-item-sub">${escapeHtml(entry.studentId || "")}</div>
+                  <div class="list-item-sub">${escapeHtml(studentLabel(entry))}</div>
                 </div>
               </div>
             `).join("") || `<div class="empty-state">No lessons</div>`}

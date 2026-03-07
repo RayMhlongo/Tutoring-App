@@ -84,14 +84,18 @@ export const DEFAULT_SETTINGS = {
     googleEnabled: false,
     googleClientId: "",
     googleSheetsEndpoint: "",
-    allowedGoogleEmail: "",
+    allowedGoogleEmail: "xfactortutoring2@gmail.com",
     sessionTtlHours: 336
+  },
+  developer: {
+    passwordSalt: "",
+    passwordHash: ""
   },
   syncProfiles: [
     {
       id: "local-profile",
-      label: "Local profile",
-      gmail: "",
+      label: "X-Factor Owner",
+      gmail: "xfactortutoring2@gmail.com",
       endpoint: "",
       active: true
     }

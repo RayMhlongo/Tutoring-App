@@ -51,6 +51,42 @@ jobs:
       - name: Sync Capacitor web assets
         run: npx cap sync android
 
+      - name: Apply Android Camera Permission and Branded App Icon
+        run: |
+          manifest="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q 'android.permission.CAMERA' "$manifest"; then
+            sed -i '/<manifest /a\    <uses-permission android:name="android.permission.CAMERA" />' "$manifest"
+          fi
+          if ! grep -q 'android.hardware.camera.any' "$manifest"; then
+            sed -i '/<uses-permission android:name="android.permission.CAMERA" \\/>/a\    <uses-feature android:name="android.hardware.camera.any" android:required="false" />' "$manifest"
+          fi
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          base = Path("android/app/src/main/res")
+          main_icon = Image.open("icons/icon-512x512.png").convert("RGBA")
+          fg_icon = Image.open("icons/icon-adaptive-foreground.png").convert("RGBA")
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+          for folder, size in sizes.items():
+              target = base / folder
+              target.mkdir(parents=True, exist_ok=True)
+              main_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher.png")
+              main_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_round.png")
+              fg_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_foreground.png")
+          (base / "values" / "ic_launcher_background.xml").write_text(
+              '<resources>\\n    <color name="ic_launcher_background">#0e3a67</color>\\n</resources>\\n',
+              encoding="utf-8"
+          )
+          PY
+
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses || true

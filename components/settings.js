@@ -56,6 +56,9 @@ export function settingsTemplate(data) {
   const settings = data.settings;
   const session = data.session || null;
   const auth = settings.auth || {};
+  const developer = settings.developer || {};
+  const isDeveloperUnlocked = Boolean(data.isDeveloperUnlocked);
+  const developerPasswordSet = Boolean(developer.passwordSalt && developer.passwordHash);
   const profiles = settings.syncProfiles || [];
   return `
     <section class="view" data-view-root="settings">
@@ -82,8 +85,55 @@ export function settingsTemplate(data) {
 
       <article class="card">
         <div class="card-title-row">
+          <h3>APP Developer</h3>
+          ${isDeveloperUnlocked ? `<span class="badge badge-success">Unlocked</span>` : `<span class="badge badge-warning">Locked</span>`}
+        </div>
+        <p class="help-text">Developer-only area for authentication, Google sync, and platform integration settings.</p>
+        ${isDeveloperUnlocked ? `
+          <form id="developerChangePasswordForm" class="split-3">
+            <label class="field">
+              <span>New Developer Password</span>
+              <input class="input" name="password" type="password" minlength="6" required>
+            </label>
+            <label class="field">
+              <span>Confirm Password</span>
+              <input class="input" name="confirmPassword" type="password" minlength="6" required>
+            </label>
+            <div class="action-row">
+              <button class="btn btn-primary" type="submit">Update Developer Password</button>
+              <button class="btn btn-outline" id="developerLockBtn" type="button">Lock</button>
+            </div>
+          </form>
+        ` : developerPasswordSet ? `
+          <form id="developerUnlockForm" class="split-2">
+            <label class="field">
+              <span>Developer Password</span>
+              <input class="input" name="password" type="password" required>
+            </label>
+            <div class="action-row">
+              <button class="btn btn-primary" type="submit">Unlock APP Developer</button>
+            </div>
+          </form>
+        ` : `
+          <form id="developerSetPasswordForm" class="split-3">
+            <label class="field">
+              <span>Create Developer Password</span>
+              <input class="input" name="password" type="password" minlength="6" required>
+            </label>
+            <label class="field">
+              <span>Confirm Password</span>
+              <input class="input" name="confirmPassword" type="password" minlength="6" required>
+            </label>
+            <button class="btn btn-primary" type="submit">Create Developer Lock</button>
+          </form>
+        `}
+      </article>
+
+      <article class="card">
+        <div class="card-title-row">
           <h3>Authentication</h3>
         </div>
+        ${isDeveloperUnlocked ? `
         <form id="authSettingsForm" class="split-3">
           <label class="field">
             <span>Enable Local Login</span>
@@ -132,45 +182,48 @@ export function settingsTemplate(data) {
           </label>
           <button class="btn btn-outline" type="submit">Update Local Password</button>
         </form>
+        ` : `<p class="help-text">Locked. Unlock APP Developer to access authentication controls.</p>`}
       </article>
 
       <article class="card">
         <div class="card-title-row">
           <h3>Google Sync Accounts</h3>
         </div>
-        <p class="help-text">Add multiple Gmail-linked Google Apps Script endpoints and switch between them quickly.</p>
-        <p class="help-text">Logged-in account: ${escapeHtml(session?.email || "Not signed in with Google")}</p>
-        <form id="syncProfileForm" class="grid">
-          <div class="split-3">
-            <div class="field">
-              <label for="profileLabel">Profile Label</label>
-              <input id="profileLabel" name="label" class="input" type="text" placeholder="Tutor Main Account">
+        ${isDeveloperUnlocked ? `
+          <p class="help-text">Add multiple Gmail-linked Google Apps Script endpoints and switch between them quickly.</p>
+          <p class="help-text">Logged-in account: ${escapeHtml(session?.email || "Not signed in with Google")}</p>
+          <form id="syncProfileForm" class="grid">
+            <div class="split-3">
+              <div class="field">
+                <label for="profileLabel">Profile Label</label>
+                <input id="profileLabel" name="label" class="input" type="text" placeholder="Tutor Main Account">
+              </div>
+              <div class="field">
+                <label for="profileGmail">Gmail Account</label>
+                <input id="profileGmail" name="gmail" class="input" type="email" placeholder="owner@gmail.com">
+              </div>
+              <div class="field">
+                <label for="profileEndpoint">Google Apps Script Endpoint</label>
+                <input id="profileEndpoint" name="endpoint" class="input" type="url" placeholder="https://script.google.com/...">
+              </div>
             </div>
-            <div class="field">
-              <label for="profileGmail">Gmail Account</label>
-              <input id="profileGmail" name="gmail" class="input" type="email" placeholder="owner@gmail.com">
+            <div class="action-row">
+              <button class="btn btn-primary" type="submit">Save Profile</button>
+              <button class="btn btn-outline" type="button" id="linkGoogleSessionBtn" ${session?.email ? "" : "disabled"}>Link Logged-in Google</button>
+              <button class="btn btn-outline" type="button" id="testEndpointBtn">Test Endpoint</button>
+              <button class="btn btn-secondary" type="button" id="pullRemoteBtn">Pull from Google Sheet</button>
             </div>
-            <div class="field">
-              <label for="profileEndpoint">Google Apps Script Endpoint</label>
-              <input id="profileEndpoint" name="endpoint" class="input" type="url" placeholder="https://script.google.com/...">
-            </div>
+          </form>
+          <div class="field">
+            <label for="activeProfileSelect">Active profile</label>
+            <select id="activeProfileSelect" name="activeProfileId" class="select">
+              ${profiles.map((profile) => `<option value="${escapeHtml(profile.id)}" ${settings.activeProfileId === profile.id ? "selected" : ""}>${escapeHtml(profile.label || profile.gmail || profile.id)}</option>`).join("")}
+            </select>
           </div>
-          <div class="action-row">
-            <button class="btn btn-primary" type="submit">Save Profile</button>
-            <button class="btn btn-outline" type="button" id="linkGoogleSessionBtn" ${session?.email ? "" : "disabled"}>Link Logged-in Google</button>
-            <button class="btn btn-outline" type="button" id="testEndpointBtn">Test Endpoint</button>
-            <button class="btn btn-secondary" type="button" id="pullRemoteBtn">Pull from Google Sheet</button>
+          <div class="list">
+            ${profiles.map((profile) => renderProfile(profile, settings.activeProfileId)).join("")}
           </div>
-        </form>
-        <div class="field">
-          <label for="activeProfileSelect">Active profile</label>
-          <select id="activeProfileSelect" name="activeProfileId" class="select">
-            ${profiles.map((profile) => `<option value="${escapeHtml(profile.id)}" ${settings.activeProfileId === profile.id ? "selected" : ""}>${escapeHtml(profile.label || profile.gmail || profile.id)}</option>`).join("")}
-          </select>
-        </div>
-        <div class="list">
-          ${profiles.map((profile) => renderProfile(profile, settings.activeProfileId)).join("")}
-        </div>
+        ` : `<p class="help-text">Locked. Unlock APP Developer to access Google sync configuration.</p>`}
       </article>
 
       <article class="card">

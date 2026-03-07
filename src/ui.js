@@ -53,7 +53,8 @@ const state = {
   latestStudentReport: null,
   scheduleViewMode: "week",
   scheduleAnchorDate: todayISODate(),
-  dashboardFilters: {}
+  dashboardFilters: {},
+  developerUnlocked: false
 };
 
 let refs = {};
@@ -61,6 +62,20 @@ let modalCleanup = null;
 
 function setHTML(element, html) {
   element.innerHTML = html;
+}
+
+function toBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+async function sha256Hex(input) {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function showToast(message, mode = "info") {
@@ -438,7 +453,7 @@ async function renderStudents() {
       const subjectValues = [form.get("subjectPrimary"), form.get("subjectSecondary")]
         .map((item) => sanitizeText(item || "", 80))
         .filter(Boolean);
-      await createStudent({
+      const createdStudent = await createStudent({
         firstName: form.get("firstName"),
         surname: form.get("surname"),
         grade: form.get("grade"),
@@ -450,6 +465,15 @@ async function renderStudents() {
       formElement?.reset();
       await refreshQueueCount();
       await renderStudents();
+      await openModal(studentQrModalTemplate(createdStudent));
+      const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
+      await generateQrToCanvas(canvas, createdStudent.qrValue || "");
+      refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
+        downloadCanvasPng(canvas, `${createdStudent.firstName}-${createdStudent.surname}-qr.png`);
+      });
+      refs.modalRoot.querySelector("#printQrBtn")?.addEventListener("click", () => {
+        printCanvas(canvas, `${createdStudent.firstName} ${createdStudent.surname} - QR`);
+      });
     } catch (error) {
       showToast(error.message, "error");
     }
@@ -568,6 +592,14 @@ async function renderSchedule() {
   }
 
   const entries = await getScheduleRange(accountId, rangeFrom, rangeTo);
+  const studentNameById = students.reduce((acc, student) => {
+    acc[student.id] = `${student.firstName} ${student.surname}`.trim();
+    return acc;
+  }, {});
+  const entriesWithStudentNames = entries.map((entry) => ({
+    ...entry,
+    studentName: studentNameById[entry.studentId] || entry.studentId
+  }));
   setHTML(refs.main, calendarTemplate({
     dateAnchor: state.scheduleAnchorDate,
     viewMode: state.scheduleViewMode,
@@ -575,7 +607,7 @@ async function renderSchedule() {
     subjects: settings.subjects || [],
     lessonCategories: settings.lessonCategories || [],
     scheduleFields: settings.scheduleCustomFields || [],
-    entries,
+    entries: entriesWithStudentNames,
     weekDays,
     monthGrid
   }));
@@ -892,9 +924,96 @@ function applyUniqueAdd(list, value) {
 async function renderSettings() {
   const { settings, accountId, profile } = await getViewData();
   const session = await getSession();
+  const developer = settings.developer || {};
+  const hasDeveloperPassword = Boolean(developer.passwordSalt && developer.passwordHash);
+  if (!hasDeveloperPassword) {
+    state.developerUnlocked = false;
+  }
   const { settingsTemplate } = await import("../components/settings.js");
-  setHTML(refs.main, settingsTemplate({ settings, session }));
+  setHTML(refs.main, settingsTemplate({ settings, session, isDeveloperUnlocked: state.developerUnlocked }));
   updateHeaderProfile(profile);
+
+  refs.main.querySelector("#developerSetPasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") || "");
+    const confirm = String(form.get("confirmPassword") || "");
+    if (password !== confirm) {
+      showToast("Developer passwords do not match.", "error");
+      return;
+    }
+    if (password.length < 6) {
+      showToast("Developer password must be at least 6 characters.", "error");
+      return;
+    }
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = toBase64(saltBytes);
+    const passwordHash = await sha256Hex(`${salt}:${sanitizeText(password, 200)}`);
+    await patchAppSettings({
+      developer: {
+        passwordSalt: salt,
+        passwordHash
+      }
+    });
+    state.developerUnlocked = true;
+    showToast("APP Developer lock created and unlocked.", "success");
+    await renderSettings();
+  });
+
+  refs.main.querySelector("#developerUnlockForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = sanitizeText(form.get("password"), 200);
+    const expectedHash = sanitizeText(developer.passwordHash || "", 200);
+    const salt = sanitizeText(developer.passwordSalt || "", 120);
+    if (!expectedHash || !salt) {
+      showToast("Developer password is not configured.", "error");
+      return;
+    }
+    const incoming = await sha256Hex(`${salt}:${password}`);
+    if (incoming !== expectedHash) {
+      showToast("Incorrect developer password.", "error");
+      return;
+    }
+    state.developerUnlocked = true;
+    showToast("APP Developer unlocked.", "success");
+    await renderSettings();
+  });
+
+  refs.main.querySelector("#developerChangePasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") || "");
+    const confirm = String(form.get("confirmPassword") || "");
+    if (password !== confirm) {
+      showToast("Developer passwords do not match.", "error");
+      return;
+    }
+    if (password.length < 6) {
+      showToast("Developer password must be at least 6 characters.", "error");
+      return;
+    }
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = toBase64(saltBytes);
+    const passwordHash = await sha256Hex(`${salt}:${sanitizeText(password, 200)}`);
+    await patchAppSettings({
+      developer: {
+        ...(settings.developer || {}),
+        passwordSalt: salt,
+        passwordHash
+      }
+    });
+    showToast("Developer password updated.", "success");
+    await renderSettings();
+  });
+
+  refs.main.querySelector("#developerLockBtn")?.addEventListener("click", async () => {
+    state.developerUnlocked = false;
+    showToast("APP Developer locked.", "success");
+    await renderSettings();
+  });
 
   refs.main.querySelector("#syncProfileForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
