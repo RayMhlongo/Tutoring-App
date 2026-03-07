@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
 
       - name: Setup Java
@@ -35,8 +35,12 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Install Capacitor Android dependencies
-        run: npm install @capacitor/core @capacitor/android @capacitor/cli
+      - name: Prepare web assets for Capacitor
+        run: |
+          rm -rf www
+          mkdir -p www
+          cp index.html manifest.json offline.html service-worker.js www/
+          cp -R assets components icons src styles www/
 
       - name: Ensure Android platform
         run: |

@@ -1,6 +1,6 @@
 {
   "appId": "com.xfactor.tutoring",
   "appName": "X-Factor Tutoring",
-  "webDir": ".",
+  "webDir": "www",
   "bundledWebRuntime": false
 }

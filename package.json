@@ -8,5 +8,10 @@
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "android:build:debug": "cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0"
   }
 }
