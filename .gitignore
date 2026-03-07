@@ -4,3 +4,5 @@ www/
 npm-debug.log*
 gradle-log-*.zip
 gradle-log-*/
+job-*.log.zip
+job-*/

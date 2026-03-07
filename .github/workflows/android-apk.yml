@@ -58,7 +58,7 @@ jobs:
             sed -i '/<manifest /a\    <uses-permission android:name="android.permission.CAMERA" />' "$manifest"
           fi
           if ! grep -q 'android.hardware.camera.any' "$manifest"; then
-            sed -i '/<uses-permission android:name="android.permission.CAMERA" \\/>/a\    <uses-feature android:name="android.hardware.camera.any" android:required="false" />' "$manifest"
+            sed -i '/<manifest /a\    <uses-feature android:name="android.hardware.camera.any" android:required="false" />' "$manifest"
           fi
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
