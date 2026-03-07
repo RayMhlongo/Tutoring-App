@@ -78,32 +78,159 @@ export function printCanvas(canvasElement, title = "Student QR Code") {
 
 export class StudentQrScanner {
   constructor(regionId) {
-    if (!window.Html5Qrcode) {
+    this.region = document.getElementById(regionId);
+    if (!this.region) {
+      throw new Error("Scanner area not found.");
+    }
+    this.mode = window.Html5Qrcode ? "html5qrcode" : "native";
+    if (this.mode === "html5qrcode") {
+      this.scanner = new window.Html5Qrcode(regionId);
+    } else if (!navigator.mediaDevices?.getUserMedia || typeof window.BarcodeDetector === "undefined") {
       throw new Error("QR scanner library unavailable.");
     }
-    this.scanner = new window.Html5Qrcode(regionId);
     this.running = false;
+    this.nativeStream = null;
+    this.nativeLoop = null;
+    this.nativeVideo = null;
+    this.scanLocked = false;
   }
 
   async start(onSuccess, onError) {
     if (this.running) return;
-    await this.scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 230 },
-      (decodedText) => onSuccess(decodedText),
-      (errorMessage) => {
-        if (typeof onError === "function") onError(errorMessage);
-      }
-    );
+    if (this.mode === "html5qrcode") {
+      await this.startHtml5Scanner(onSuccess, onError);
+    } else {
+      await this.startNativeScanner(onSuccess, onError);
+    }
     this.running = true;
+  }
+
+  async startHtml5Scanner(onSuccess, onError) {
+    const successHandler = async (decodedText) => {
+      if (this.scanLocked) return;
+      this.scanLocked = true;
+      try {
+        await onSuccess(decodedText);
+      } finally {
+        window.setTimeout(() => {
+          this.scanLocked = false;
+        }, 900);
+      }
+    };
+    const errorHandler = (errorMessage) => {
+      if (typeof onError === "function") onError(errorMessage);
+    };
+    const scannerOptions = { fps: 10, qrbox: 230 };
+    const attempts = [
+      { facingMode: { exact: "environment" } },
+      { facingMode: "environment" }
+    ];
+    let lastError = null;
+    for (const camera of attempts) {
+      try {
+        await this.scanner.start(camera, scannerOptions, successHandler, errorHandler);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    try {
+      const cameras = await window.Html5Qrcode.getCameras();
+      if (Array.isArray(cameras) && cameras.length) {
+        const preferred = cameras.find((cam) => /(back|rear|environment)/i.test(cam.label || "")) || cameras[0];
+        await this.scanner.start(preferred.id, scannerOptions, successHandler, errorHandler);
+        return;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    throw lastError || new Error("No camera available.");
+  }
+
+  async startNativeScanner(onSuccess, onError) {
+    const supportsQr = await window.BarcodeDetector.getSupportedFormats()
+      .then((formats) => formats.includes("qr_code"))
+      .catch(() => false);
+    if (!supportsQr) {
+      throw new Error("QR scanning is not supported on this browser.");
+    }
+
+    this.nativeStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false
+    });
+
+    const video = document.createElement("video");
+    video.setAttribute("playsinline", "true");
+    video.autoplay = true;
+    video.muted = true;
+    video.style.width = "100%";
+    video.style.borderRadius = "12px";
+    video.srcObject = this.nativeStream;
+    this.region.innerHTML = "";
+    this.region.appendChild(video);
+    await video.play();
+    this.nativeVideo = video;
+
+    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    const scanLoop = async () => {
+      if (!this.running) return;
+      try {
+        const found = await detector.detect(video);
+        const first = found?.[0]?.rawValue;
+        if (first) {
+          if (!this.scanLocked) {
+            this.scanLocked = true;
+            try {
+              await onSuccess(first);
+            } finally {
+              window.setTimeout(() => {
+                this.scanLocked = false;
+              }, 900);
+            }
+          }
+        }
+      } catch (error) {
+        if (typeof onError === "function") onError(error?.message || "Scan error");
+      }
+      this.nativeLoop = window.setTimeout(scanLoop, 180);
+    };
+    this.nativeLoop = window.setTimeout(scanLoop, 180);
   }
 
   async stop() {
     if (!this.running) return;
     try {
-      await this.scanner.stop();
-      await this.scanner.clear();
+      if (this.mode === "html5qrcode") {
+        try {
+          await this.scanner.stop();
+        } catch {
+          // scanner may already be stopped
+        }
+        try {
+          await this.scanner.clear();
+        } catch {
+          // scanner view may already be cleared
+        }
+      } else {
+        if (this.nativeLoop) {
+          window.clearTimeout(this.nativeLoop);
+          this.nativeLoop = null;
+        }
+        if (this.nativeVideo) {
+          this.nativeVideo.pause();
+          this.nativeVideo.srcObject = null;
+          this.nativeVideo.remove();
+          this.nativeVideo = null;
+        }
+        if (this.nativeStream) {
+          this.nativeStream.getTracks().forEach((track) => track.stop());
+          this.nativeStream = null;
+        }
+      }
     } finally {
+      this.scanLocked = false;
       this.running = false;
     }
   }

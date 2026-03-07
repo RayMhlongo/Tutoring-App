@@ -1,7 +1,8 @@
-import { sendQueuedChange } from "./api.js";
+import { normalizeEndpoint, sendQueuedChange } from "./api.js";
 import {
   getActiveProfile,
   getAccountIdFromProfile,
+  getAppSettings,
   getQueueCount,
   getQueuedChanges,
   markQueueFailed,
@@ -22,6 +23,10 @@ let heartbeatTimer = null;
 
 function emit() {
   listeners.forEach((listener) => listener({ ...state }));
+}
+
+export function getSyncStateSnapshot() {
+  return { ...state };
 }
 
 export function subscribeSyncState(listener) {
@@ -51,20 +56,17 @@ export async function requestBackgroundSync() {
 
 export async function syncNow(force = false) {
   if (state.running) return false;
-  const profile = await getActiveProfile();
+  const [settings, profile] = await Promise.all([getAppSettings(), getActiveProfile()]);
   const accountId = getAccountIdFromProfile(profile);
-  const hasEndpoint = Boolean(profile?.endpoint);
+  const resolvedEndpoint = normalizeEndpoint(profile?.endpoint || settings?.auth?.googleSheetsEndpoint || "");
+  const hasEndpoint = Boolean(resolvedEndpoint);
+  const effectiveProfile = { ...profile, endpoint: resolvedEndpoint };
 
   state.queueCount = await getQueueCount(accountId);
   emit();
 
   if (!navigator.onLine && !force) {
     state.lastError = "Offline. Sync paused.";
-    emit();
-    return false;
-  }
-  if (!hasEndpoint && !force) {
-    state.lastError = "No Google Sheets endpoint configured.";
     emit();
     return false;
   }
@@ -76,19 +78,26 @@ export async function syncNow(force = false) {
     emit();
     return true;
   }
+  if (!hasEndpoint && !force) {
+    state.lastError = "No Google Sheets endpoint configured. Add it in Settings > Google Sync Accounts.";
+    emit();
+    return false;
+  }
 
   state.running = true;
   state.lastError = "";
   emit();
+  let hadErrors = false;
 
   for (const change of queue) {
     try {
-      if (!profile.endpoint && !force) {
+      if (!effectiveProfile.endpoint && !force) {
         throw new Error("Missing endpoint");
       }
-      await sendQueuedChange(profile, change);
+      await sendQueuedChange(effectiveProfile, change);
       await markQueueSynced(change.queueId);
     } catch (error) {
+      hadErrors = true;
       const attempts = Number(change.attempts || 0) + 1;
       await markQueueFailed(change.queueId, error?.message || "Sync request failed.", attempts);
       state.lastError = error?.message || "Sync request failed.";
@@ -99,7 +108,7 @@ export async function syncNow(force = false) {
   state.running = false;
   state.lastSyncedAt = new Date().toISOString();
   emit();
-  return true;
+  return !hadErrors;
 }
 
 export function initSyncEngine() {

@@ -54,6 +54,7 @@ function renderDynamicField(item, collection) {
 
 export function settingsTemplate(data) {
   const settings = data.settings;
+  const session = data.session || null;
   const auth = settings.auth || {};
   const profiles = settings.syncProfiles || [];
   return `
@@ -107,6 +108,10 @@ export function settingsTemplate(data) {
             <input class="input" name="googleClientId" type="text" value="${escapeHtml(auth.googleClientId || "")}" placeholder="123456.apps.googleusercontent.com">
           </label>
           <label class="field">
+            <span>Default Google Sheets Endpoint</span>
+            <input class="input" name="googleSheetsEndpoint" type="url" value="${escapeHtml(auth.googleSheetsEndpoint || "")}" placeholder="https://script.google.com/macros/s/.../exec">
+          </label>
+          <label class="field">
             <span>Allowed Google Email</span>
             <input class="input" name="allowedGoogleEmail" type="email" value="${escapeHtml(auth.allowedGoogleEmail || "")}" placeholder="owner@gmail.com">
           </label>
@@ -134,6 +139,7 @@ export function settingsTemplate(data) {
           <h3>Google Sync Accounts</h3>
         </div>
         <p class="help-text">Add multiple Gmail-linked Google Apps Script endpoints and switch between them quickly.</p>
+        <p class="help-text">Logged-in account: ${escapeHtml(session?.email || "Not signed in with Google")}</p>
         <form id="syncProfileForm" class="grid">
           <div class="split-3">
             <div class="field">
@@ -151,6 +157,7 @@ export function settingsTemplate(data) {
           </div>
           <div class="action-row">
             <button class="btn btn-primary" type="submit">Save Profile</button>
+            <button class="btn btn-outline" type="button" id="linkGoogleSessionBtn" ${session?.email ? "" : "disabled"}>Link Logged-in Google</button>
             <button class="btn btn-outline" type="button" id="testEndpointBtn">Test Endpoint</button>
             <button class="btn btn-secondary" type="button" id="pullRemoteBtn">Pull from Google Sheet</button>
           </div>

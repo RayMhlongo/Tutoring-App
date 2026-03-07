@@ -1,9 +1,9 @@
 import { sanitizeObject, sanitizeText } from "./utils.js";
 
-function normalizeEndpoint(url) {
+export function normalizeEndpoint(url) {
   const endpoint = sanitizeText(url, 1400);
   if (!endpoint) return "";
-  if (!/^https:\/\/script\.google\.com\//i.test(endpoint)) return "";
+  if (!/^https:\/\/(script\.google\.com|script\.googleusercontent\.com)\//i.test(endpoint)) return "";
   return endpoint;
 }
 

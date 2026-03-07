@@ -83,6 +83,7 @@ export const DEFAULT_SETTINGS = {
     localSalt: "",
     googleEnabled: false,
     googleClientId: "",
+    googleSheetsEndpoint: "",
     allowedGoogleEmail: "",
     sessionTtlHours: 336
   },

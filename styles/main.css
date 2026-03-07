@@ -545,6 +545,8 @@ th {
 
 .scanner-region {
   width: 100%;
+  min-height: 260px;
+  background: #0f2f52;
   border-radius: var(--radius-md);
   overflow: hidden;
 }

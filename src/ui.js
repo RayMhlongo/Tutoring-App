@@ -1,6 +1,5 @@
 import { pingEndpoint, fetchRemoteSnapshot, exportSnapshotToGoogle } from "./api.js";
-import { logout as clearAuthSession } from "./auth.js";
-import { setLocalAdminCredentials, updateAuthSettings } from "./auth.js";
+import { getSession, logout as clearAuthSession, setLocalAdminCredentials, updateAuthSettings } from "./auth.js";
 import { logAttendance } from "./attendance.js";
 import { backupToGoogleDrive, exportBackupCsv, exportBackupJson, restoreFromLocalFile, restoreLatestFromGoogleDrive } from "./backup.js";
 import { createLesson, downloadLessonPdf, listLessons } from "./lessons.js";
@@ -34,7 +33,7 @@ import {
   printCanvas
 } from "./qr.js";
 import { createScheduleEntry, exportScheduleAsImage, getScheduleForStudentDate, getScheduleRange, getWeekRange, listScheduleEntries } from "./scheduler.js";
-import { refreshQueueCount, syncNow } from "./sync.js";
+import { getSyncStateSnapshot, refreshQueueCount, syncNow } from "./sync.js";
 import {
   debounce,
   escapeHtml,
@@ -429,7 +428,8 @@ async function renderStudents() {
 
   refs.main.querySelector("#studentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const customFields = {};
     settings.customStudentFields.forEach((field) => {
       customFields[field.key] = form.get(`custom_${field.key}`) || "";
@@ -447,7 +447,7 @@ async function renderStudents() {
         notes: form.get("notes")
       }, accountId);
       showToast("Student saved.", "success");
-      event.currentTarget.reset();
+      formElement?.reset();
       await refreshQueueCount();
       await renderStudents();
     } catch (error) {
@@ -506,7 +506,9 @@ async function renderStudents() {
       });
       modalCleanup = async () => scanner.stop();
     } catch (error) {
-      showToast(`Unable to start scanner: ${error.message}`, "error");
+      const detail = String(error?.message || "Camera could not start.");
+      const secureHint = window.isSecureContext ? "" : " Use HTTPS or install the app before scanning.";
+      showToast(`Unable to start scanner: ${detail}${secureHint}`, "error");
       await closeModal();
     }
   });
@@ -684,7 +686,8 @@ async function renderLessons() {
 
   refs.main.querySelector("#lessonForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createLesson({
         date: form.get("date"),
@@ -699,7 +702,7 @@ async function renderLessons() {
         status: "completed"
       }, accountId);
       showToast("Lesson saved.", "success");
-      event.currentTarget.reset();
+      formElement?.reset();
       await refreshQueueCount();
       await renderLessons();
     } catch (error) {
@@ -773,7 +776,8 @@ async function renderPayments() {
 
   refs.main.querySelector("#paymentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createPayment({
         studentId: form.get("studentId"),
@@ -784,7 +788,7 @@ async function renderPayments() {
         notes: form.get("notes")
       }, accountId);
       showToast("Payment saved.", "success");
-      event.currentTarget.reset();
+      formElement?.reset();
       await refreshQueueCount();
       await renderPayments();
     } catch (error) {
@@ -805,7 +809,8 @@ async function renderExpenses() {
 
   refs.main.querySelector("#expenseForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await createExpense({
         date: form.get("date"),
@@ -814,7 +819,7 @@ async function renderExpenses() {
         notes: form.get("notes")
       }, accountId);
       showToast("Expense saved.", "success");
-      event.currentTarget.reset();
+      formElement?.reset();
       await refreshQueueCount();
       await renderExpenses();
     } catch (error) {
@@ -886,13 +891,15 @@ function applyUniqueAdd(list, value) {
 
 async function renderSettings() {
   const { settings, accountId, profile } = await getViewData();
+  const session = await getSession();
   const { settingsTemplate } = await import("../components/settings.js");
-  setHTML(refs.main, settingsTemplate({ settings }));
+  setHTML(refs.main, settingsTemplate({ settings, session }));
   updateHeaderProfile(profile);
 
   refs.main.querySelector("#syncProfileForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await saveSyncProfile({
         label: form.get("label"),
@@ -901,10 +908,35 @@ async function renderSettings() {
         active: true
       });
       showToast("Sync profile saved.", "success");
+      formElement?.reset();
       await renderSettings();
     } catch (error) {
       showToast(error.message, "error");
     }
+  });
+
+  refs.main.querySelector("#linkGoogleSessionBtn")?.addEventListener("click", async () => {
+    const email = sanitizeText(session?.email || "", 160).toLowerCase();
+    if (!email) {
+      showToast("No Google login session found. Enable Google login and sign in first.", "error");
+      return;
+    }
+    const existing = (settings.syncProfiles || []).find((item) => sanitizeText(item.gmail || "", 160).toLowerCase() === email);
+    const endpoint = window.prompt(
+      "Paste the Google Apps Script endpoint for this Gmail account (you can leave it as-is if already set):",
+      existing?.endpoint || settings.auth?.googleSheetsEndpoint || ""
+    );
+    if (endpoint === null) return;
+    await saveSyncProfile({
+      id: existing?.id,
+      label: existing?.label || session?.displayName || email,
+      gmail: email,
+      endpoint,
+      active: true
+    });
+    showToast("Google account linked and activated.", "success");
+    await refreshQueueCount();
+    await renderSettings();
   });
 
   refs.main.querySelector("#activeProfileSelect")?.addEventListener("change", async (event) => {
@@ -933,6 +965,7 @@ async function renderSettings() {
       localEnabled: String(form.get("localEnabled")) === "true",
       googleEnabled: String(form.get("googleEnabled")) === "true",
       googleClientId: form.get("googleClientId"),
+      googleSheetsEndpoint: form.get("googleSheetsEndpoint"),
       allowedGoogleEmail: form.get("allowedGoogleEmail"),
       sessionTtlHours: Math.max(12, sanitizeNumber(form.get("sessionTtlHours"), 336))
     });
@@ -942,7 +975,8 @@ async function renderSettings() {
 
   refs.main.querySelector("#localAdminPasswordForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const password = String(form.get("password") || "");
     const confirm = String(form.get("confirmPassword") || "");
     if (password !== confirm) {
@@ -952,7 +986,7 @@ async function renderSettings() {
     try {
       await setLocalAdminCredentials(form.get("username"), password);
       showToast("Local admin password updated.", "success");
-      event.currentTarget.reset();
+      formElement?.reset();
     } catch (error) {
       showToast(error.message, "error");
     }
@@ -980,7 +1014,7 @@ async function renderSettings() {
   });
 
   refs.main.querySelector("#testEndpointBtn")?.addEventListener("click", async () => {
-    const endpoint = refs.main.querySelector("#profileEndpoint")?.value || profile.endpoint || "";
+    const endpoint = refs.main.querySelector("#profileEndpoint")?.value || profile.endpoint || settings.auth?.googleSheetsEndpoint || "";
     try {
       await pingEndpoint(endpoint);
       showToast("Endpoint connection successful.", "success");
@@ -992,7 +1026,10 @@ async function renderSettings() {
   refs.main.querySelector("#pullRemoteBtn")?.addEventListener("click", async () => {
     try {
       const active = await getActiveProfile();
-      const remote = await fetchRemoteSnapshot(active);
+      const remote = await fetchRemoteSnapshot({
+        ...active,
+        endpoint: active.endpoint || settings.auth?.googleSheetsEndpoint || ""
+      });
       await replaceAccountDataset(active.id, remote);
       showToast("Pulled latest data from Google Sheet.", "success");
       await renderSettings();
@@ -1210,7 +1247,10 @@ async function renderSettings() {
     try {
       const active = await getActiveProfile();
       const snapshot = await loadAccountSnapshot(accountId);
-      await exportSnapshotToGoogle(active, snapshot);
+      await exportSnapshotToGoogle({
+        ...active,
+        endpoint: active.endpoint || settings.auth?.googleSheetsEndpoint || ""
+      }, snapshot);
       showToast("All data exported to Google Sheet.", "success");
     } catch (error) {
       showToast(error.message, "error");
@@ -1250,7 +1290,15 @@ export async function initUI(domRefs) {
   refs.syncNowBtn.addEventListener("click", async () => {
     const ok = await syncNow(false);
     await refreshQueueCount();
-    showToast(ok ? "Manual sync finished." : "Sync skipped (offline or endpoint missing).", ok ? "success" : "error");
+    const syncState = getSyncStateSnapshot();
+    if (ok) {
+      showToast("Manual sync finished.", "success");
+      return;
+    }
+    showToast(syncState.lastError || "Sync skipped.", "error");
+    if ((syncState.lastError || "").toLowerCase().includes("endpoint")) {
+      await navigate("settings");
+    }
   });
 
   refs.logoutBtn?.addEventListener("click", async () => {

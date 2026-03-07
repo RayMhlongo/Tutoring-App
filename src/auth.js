@@ -143,7 +143,48 @@ export async function createSession(sessionData) {
     expiresAt
   };
   await setSetting(AUTH_SESSION_KEY, session);
+  if (session.mode === "google" && session.email) {
+    await ensureGoogleSessionProfile(session.email, session.displayName);
+  }
   return session;
+}
+
+async function ensureGoogleSessionProfile(email, displayName) {
+  const settings = await getAppSettings();
+  const profiles = Array.isArray(settings.syncProfiles) ? [...settings.syncProfiles] : [];
+  const normalizedEmail = sanitizeEmail(email);
+  if (!normalizedEmail) return;
+
+  const existing = profiles.find((profile) => sanitizeEmail(profile.gmail || "") === normalizedEmail);
+  if (existing) {
+    const nextProfiles = profiles.map((profile) => {
+      if (profile.id !== existing.id) return { ...profile, active: false };
+      return {
+        ...profile,
+        gmail: normalizedEmail,
+        label: profile.label || sanitizeText(displayName || normalizedEmail, 60),
+        active: true
+      };
+    });
+    await patchAppSettings({
+      syncProfiles: nextProfiles,
+      activeProfileId: existing.id
+    });
+    return;
+  }
+
+  const id = uid("acct");
+  const nextProfiles = profiles.map((profile) => ({ ...profile, active: false })).concat([{
+    id,
+    label: sanitizeText(displayName || normalizedEmail, 60),
+    gmail: normalizedEmail,
+    endpoint: "",
+    active: true
+  }]);
+  await patchAppSettings({
+    syncProfiles: nextProfiles,
+    activeProfileId: id
+  });
 }
 
 export async function getSession() {
@@ -196,6 +237,9 @@ export async function updateAuthSettings(partialAuth) {
   }
   if (partialAuth.googleClientId !== undefined) {
     nextAuth.googleClientId = sanitizeText(partialAuth.googleClientId, 320);
+  }
+  if (partialAuth.googleSheetsEndpoint !== undefined) {
+    nextAuth.googleSheetsEndpoint = sanitizeText(partialAuth.googleSheetsEndpoint, 1400);
   }
   if (partialAuth.localAdminUsername !== undefined) {
     nextAuth.localAdminUsername = sanitizeText(partialAuth.localAdminUsername, 80) || "admin";
