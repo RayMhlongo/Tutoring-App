@@ -82,7 +82,7 @@ jobs:
               main_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_round.png")
               fg_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_foreground.png")
           (base / "values" / "ic_launcher_background.xml").write_text(
-              '<resources>\\n    <color name="ic_launcher_background">#0e3a67</color>\\n</resources>\\n',
+              '<resources>\n    <color name="ic_launcher_background">#0e3a67</color>\n</resources>\n',
               encoding="utf-8"
           )
           PY

@@ -4,6 +4,20 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeCameraError(error) {
+  const raw = String(error?.message || error?.name || "").toLowerCase();
+  if (raw.includes("notallowed") || raw.includes("permission denied") || raw.includes("denied")) {
+    return "Camera permission denied. Allow camera access for this app and try again.";
+  }
+  if (raw.includes("notfound") || raw.includes("no camera") || raw.includes("overconstrained")) {
+    return "No usable camera was found on this device.";
+  }
+  if (raw.includes("notreadable") || raw.includes("trackstart")) {
+    return "Camera is busy in another app. Close other camera apps and retry.";
+  }
+  return error?.message || "Camera could not start.";
+}
+
 export function buildQrValue(qrFormat, studentId) {
   const format = sanitizeText(qrFormat || "XFACTOR:{id}", 120);
   if (!format.includes("{id}")) return `XFACTOR:${studentId}`;
@@ -93,10 +107,31 @@ export class StudentQrScanner {
     this.nativeLoop = null;
     this.nativeVideo = null;
     this.scanLocked = false;
+    this.permissionChecked = false;
+  }
+
+  async ensureCameraPermission() {
+    if (this.permissionChecked) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera API is unavailable on this device.");
+    }
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+      });
+      this.permissionChecked = true;
+    } catch (error) {
+      throw new Error(normalizeCameraError(error));
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+    }
   }
 
   async start(onSuccess, onError) {
     if (this.running) return;
+    await this.ensureCameraPermission();
     if (this.mode === "html5qrcode") {
       await this.startHtml5Scanner(onSuccess, onError);
     } else {
@@ -145,7 +180,10 @@ export class StudentQrScanner {
     } catch (error) {
       lastError = error;
     }
-    throw lastError || new Error("No camera available.");
+    if (lastError) {
+      throw new Error(normalizeCameraError(lastError));
+    }
+    throw new Error("No camera available.");
   }
 
   async startNativeScanner(onSuccess, onError) {
@@ -156,10 +194,14 @@ export class StudentQrScanner {
       throw new Error("QR scanning is not supported on this browser.");
     }
 
-    this.nativeStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-      audio: false
-    });
+    try {
+      this.nativeStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+      });
+    } catch (error) {
+      throw new Error(normalizeCameraError(error));
+    }
 
     const video = document.createElement("video");
     video.setAttribute("playsinline", "true");

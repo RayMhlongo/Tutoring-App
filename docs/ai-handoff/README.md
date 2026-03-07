@@ -102,6 +102,7 @@ When locked:
 `src/qr.js`:
 - Primary scanner: `html5-qrcode`
 - Fallback scanner: native `BarcodeDetector` + `getUserMedia`
+- Explicit camera permission preflight with normalized error mapping
 - Multi-strategy camera startup:
   - exact environment camera
   - ideal environment camera
@@ -136,6 +137,7 @@ Workflow: `.github/workflows/android-apk.yml`
 - Applies:
   - Camera permission in AndroidManifest
   - Branded launcher icon assets
+- Fix included for malformed launcher background XML generation in CI
 - Installs Android SDK packages
 - Builds debug APK
 - Uploads artifacts:
@@ -172,11 +174,11 @@ For full Google integration:
 - Syntax validation (`node --check`) on changed JS modules
 - Sync engine fallback/path checks
 - QR scanner startup hardening and fallback implementation
-- Android APK CI workflow executed successfully with artifact output
+- `npm run android:sync` validation completed
+- Local `android:build:debug` attempted (expected failure without local Android SDK path)
 
 ## 16) Suggested Next Enhancements
 - Add automated Playwright UI smoke tests for critical flows
 - Add Cypress/PWA offline scenario tests
 - Add migration script for future schema version upgrades
 - Add structured logging view for sync failures in UI
-
