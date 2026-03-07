@@ -51,15 +51,11 @@ jobs:
       - name: Sync Capacitor web assets
         run: npx cap sync android
 
-      - name: Normalize Android SDK levels for CI
-        run: |
-          sed -i 's/compileSdkVersion = 36/compileSdkVersion = 35/' android/variables.gradle
-          sed -i 's/targetSdkVersion = 36/targetSdkVersion = 35/' android/variables.gradle
-
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-36"
+          sdkmanager "build-tools;36.0.0" || sdkmanager "build-tools;35.0.0"
 
       - name: Configure Android SDK path
         run: |
@@ -67,9 +63,18 @@ jobs:
 
       - name: Build Debug APK
         run: |
+          set -o pipefail
           cd android
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee ../gradle-build.log
+
+      - name: Collect APK Outputs
+        if: success()
+        run: |
+          mkdir -p apk-artifacts
+          find android -type f -name "*.apk" -exec cp {} apk-artifacts/ \;
+          ls -la apk-artifacts
+          test "$(find apk-artifacts -type f -name '*.apk' | wc -l)" -gt 0
 
       - name: Upload Gradle Build Log
         if: always()
@@ -83,5 +88,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xfactor-tutoring-debug-apk
-          path: android/**/*.apk
+          path: apk-artifacts/*.apk
           if-no-files-found: error
