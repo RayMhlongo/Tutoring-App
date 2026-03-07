@@ -2,6 +2,8 @@ node_modules/
 android/
 www/
 npm-debug.log*
+xfactor-tutoring.zip
+android-gradle-build-log/
 gradle-log-*.zip
 gradle-log-*/
 job-*.log.zip

@@ -1,13 +1,16 @@
 import { TABLES } from "./config.js";
 import { listRecords, saveRecord } from "./storage.js";
 import { monthKey, sanitizeNumber, sanitizeText, uid } from "./utils.js";
+import { validatePaymentPayload, requiredIsoDate } from "./validation.js";
 
 export async function createPayment(payload, accountId) {
-  const studentId = sanitizeText(payload.studentId, 120);
-  if (!studentId) throw new Error("Student is required.");
-
-  const amountDue = sanitizeNumber(payload.amountDue ?? payload.amount, 0);
-  const amountPaid = sanitizeNumber(payload.amountPaid ?? payload.amount, 0);
+  const validated = validatePaymentPayload({
+    ...payload,
+    date: payload.date || new Date().toISOString().slice(0, 10)
+  });
+  const studentId = validated.studentId;
+  const amountDue = validated.amountDue;
+  const amountPaid = validated.amountPaid;
   const balance = Number((amountDue - amountPaid).toFixed(2));
 
   const record = {
@@ -16,7 +19,7 @@ export async function createPayment(payload, accountId) {
     amountDue,
     amountPaid,
     balance,
-    date: sanitizeText(payload.date || new Date().toISOString().slice(0, 10), 20),
+    date: validated.date,
     method: sanitizeText(payload.method || "EFT", 40),
     notes: sanitizeText(payload.notes, 2000),
     status: balance <= 0 ? "paid" : "outstanding"
@@ -46,7 +49,7 @@ export async function createExpense(payload, accountId) {
   const amount = sanitizeNumber(payload.amount, 0);
   if (amount <= 0) throw new Error("Expense amount must be greater than zero.");
 
-  const date = sanitizeText(payload.date || new Date().toISOString().slice(0, 10), 20);
+  const date = requiredIsoDate(payload.date || new Date().toISOString().slice(0, 10), "Expense date");
   const record = {
     id: payload.id || uid("exp"),
     date,

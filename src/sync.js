@@ -10,6 +10,7 @@ import {
   resetDeadQueueToPending
 } from "./storage.js";
 import { SYNC } from "./config.js";
+import { logError, logInfo, logWarn } from "./logger.js";
 
 const state = {
   running: false,
@@ -67,6 +68,7 @@ export async function syncNow(force = false) {
 
   if (!navigator.onLine && !force) {
     state.lastError = "Offline. Sync paused.";
+    logWarn("Sync skipped while offline", { accountId });
     emit();
     return false;
   }
@@ -75,11 +77,13 @@ export async function syncNow(force = false) {
   if (!queue.length) {
     state.lastError = "";
     state.lastSyncedAt = new Date().toISOString();
+    logInfo("Sync completed: queue empty", { accountId });
     emit();
     return true;
   }
   if (!hasEndpoint && !force) {
     state.lastError = "No Google Sheets endpoint configured. Add it in Settings > Google Sync Accounts.";
+    logWarn("Sync skipped: endpoint missing", { accountId, profileId: effectiveProfile?.id || "" });
     emit();
     return false;
   }
@@ -101,12 +105,21 @@ export async function syncNow(force = false) {
       const attempts = Number(change.attempts || 0) + 1;
       await markQueueFailed(change.queueId, error?.message || "Sync request failed.", attempts);
       state.lastError = error?.message || "Sync request failed.";
+      logError("Queued sync item failed", {
+        accountId,
+        table: change.table,
+        recordId: change.recordId,
+        attempts
+      }, error);
     }
   }
 
   state.queueCount = await getQueueCount(accountId);
   state.running = false;
   state.lastSyncedAt = new Date().toISOString();
+  if (!hadErrors) {
+    logInfo("Sync batch completed", { accountId, processed: queue.length });
+  }
   emit();
   return !hadErrors;
 }
@@ -114,6 +127,7 @@ export async function syncNow(force = false) {
 export function initSyncEngine() {
   window.addEventListener("online", async () => {
     state.lastError = "";
+    logInfo("Network online: resuming sync");
     emit();
     await refreshQueueCount();
     await requestBackgroundSync();
@@ -122,6 +136,7 @@ export function initSyncEngine() {
 
   window.addEventListener("offline", () => {
     state.lastError = "Offline. Changes are saved locally.";
+    logWarn("Network offline: sync paused");
     emit();
   });
 

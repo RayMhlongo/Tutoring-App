@@ -402,6 +402,18 @@ textarea {
   min-height: 5.8rem;
 }
 
+.input-inline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.input-inline .btn {
+  min-height: 2.65rem;
+  white-space: nowrap;
+}
+
 .split-2,
 .split-3 {
   display: grid;

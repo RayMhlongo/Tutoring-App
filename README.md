@@ -33,6 +33,11 @@ Offline-first tutoring business platform, optimized for Android APK distribution
   - Sync queue with retries and duplicate-safe `changeId`
   - Google Apps Script endpoints: `ping`, `syncChange`, `getAll`, `exportSnapshot`
   - Schedule table added to sync
+- Reliability hardening:
+  - Central runtime logger (`src/logger.js`)
+  - API retry logic for transient backend/network failures
+  - Global crash capture (`error` + `unhandledrejection`)
+  - Shared validation layer (`src/validation.js`) used by student/payment/lesson/schedule writes
 - PWA + APK readiness:
   - Service worker app-shell/runtime caching
   - Manifest + icons
@@ -89,6 +94,30 @@ npm run serve
 ```
 
 Open the local URL in Chrome/Edge.
+
+## Automated Tests
+```bash
+npm test
+```
+
+Includes checks for:
+- Student registration save flow (including QR fields)
+- QR value parsing/building
+- Attendance persistence
+- Payment persistence
+- Local authentication flow
+
+## Stress Test
+```bash
+npm run stress:test
+```
+
+Simulates:
+- 1000 students
+- 10000 attendance records
+- 5000 payment records
+
+and validates data integrity after the run.
 
 ## Google Sheets Backend Setup
 1. Open your Google Sheet.

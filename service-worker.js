@@ -1,4 +1,4 @@
-const CACHE_VERSION = "xfactor-v1.1.0";
+const CACHE_VERSION = "xfactor-v1.1.2";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -12,6 +12,8 @@ const APP_SHELL = [
   "./src/app.js",
   "./src/config.js",
   "./src/utils.js",
+  "./src/validation.js",
+  "./src/logger.js",
   "./src/view-utils.js",
   "./src/storage.js",
   "./src/sync.js",

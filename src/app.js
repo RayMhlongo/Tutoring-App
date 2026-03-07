@@ -12,6 +12,7 @@ import { restoreFromLocalFile } from "./backup.js";
 import { requestBackgroundSync, initSyncEngine, refreshQueueCount, subscribeSyncState, syncNow } from "./sync.js";
 import { initTheme } from "./theme.js";
 import { initUI, setConnectionStatusLabel, setSyncStatusLabel, showToast } from "./ui.js";
+import { logError, logInfo, logWarn } from "./logger.js";
 import {
   authenticateGoogleCredential,
   authenticateLocal,
@@ -27,11 +28,25 @@ const authRoot = document.getElementById("authRoot");
 const installBtn = document.getElementById("installBtn");
 let deferredInstallPrompt = null;
 
+function registerGlobalErrorHandlers() {
+  window.addEventListener("error", (event) => {
+    logError("Unhandled runtime error", {
+      file: event.filename || "",
+      line: event.lineno || 0,
+      column: event.colno || 0
+    }, event.error || event.message);
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    logError("Unhandled promise rejection", {}, event.reason);
+  });
+}
+
 function setupInstallPrompt() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
     installBtn.hidden = false;
+    logInfo("Install prompt captured");
   });
 
   installBtn.addEventListener("click", async () => {
@@ -45,6 +60,7 @@ function setupInstallPrompt() {
   window.addEventListener("appinstalled", () => {
     deferredInstallPrompt = null;
     installBtn.hidden = true;
+    logInfo("PWA installed");
     showToast("App installed successfully.", "success");
   });
 }
@@ -53,7 +69,9 @@ async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   try {
     await navigator.serviceWorker.register("./service-worker.js");
+    logInfo("Service worker registered");
   } catch {
+    logWarn("Service worker registration failed");
     // no-op: app remains functional without service worker
   }
 }
@@ -85,6 +103,20 @@ function setAuthError(message) {
   errorEl.textContent = message;
 }
 
+function bindPasswordVisibilityToggles(rootElement) {
+  rootElement.querySelectorAll("[data-toggle-password]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetId = button.getAttribute("data-target");
+      if (!targetId) return;
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.textContent = show ? "Hide" : "Show";
+    });
+  });
+}
+
 async function ensureAuthenticated() {
   await ensureAuthSettingsDefaults();
   while (true) {
@@ -107,6 +139,7 @@ async function ensureAuthenticated() {
       localCredentialsReady: state.localCredentialsReady,
       online: navigator.onLine
     });
+    bindPasswordVisibilityToggles(authRoot);
 
     const session = await new Promise((resolve) => {
       const setupForm = authRoot.querySelector("#localSetupForm");
@@ -227,6 +260,8 @@ async function maybePromptRestoreFlow() {
 }
 
 async function bootstrap() {
+  registerGlobalErrorHandlers();
+  logInfo("App bootstrap started");
   await registerServiceWorker();
   setupInstallPrompt();
   await initStorage();
@@ -256,12 +291,14 @@ async function bootstrap() {
   if (navigator.onLine) {
     await syncNow();
   }
+  logInfo("App bootstrap completed");
 }
 
 bootstrap().catch((error) => {
   appShell.hidden = false;
   splashScreen.style.display = "none";
   authRoot.hidden = true;
+  logError("Startup crash", {}, error);
   // eslint-disable-next-line no-console
   console.error(error);
   showToast(`Startup error: ${error.message}`, "error");

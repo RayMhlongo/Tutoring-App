@@ -28,6 +28,8 @@ The app is designed for tutor-first mobile usage during live sessions.
 - Sync engine: `src/sync.js`
 - Google API transport: `src/api.js`
 - Authentication/session: `src/auth.js`
+- Validation layer: `src/validation.js`
+- Runtime logging: `src/logger.js`
 - Feature domains:
   - `src/students.js`
   - `src/lessons.js`
@@ -176,6 +178,8 @@ For full Google integration:
 - QR scanner startup hardening and fallback implementation
 - `npm run android:sync` validation completed
 - Local `android:build:debug` attempted (expected failure without local Android SDK path)
+- Automated tests: `npm test` (student registration, QR parser/build, attendance, payments, local auth)
+- Stress simulation: `npm run stress:test` (1000 students, 10000 attendance, 5000 payments; integrity check passed)
 
 ## 16) Suggested Next Enhancements
 - Add automated Playwright UI smoke tests for critical flows

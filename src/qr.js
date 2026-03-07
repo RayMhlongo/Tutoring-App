@@ -68,7 +68,9 @@ export function downloadCanvasPng(canvasElement, filename) {
 export function printCanvas(canvasElement, title = "Student QR Code") {
   const dataUrl = canvasElement.toDataURL("image/png");
   const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
+  if (!printWindow) {
+    throw new Error("Popup blocked. Allow popups to print QR codes.");
+  }
   printWindow.document.write(`
     <!doctype html>
     <html>

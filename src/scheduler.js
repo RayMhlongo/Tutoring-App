@@ -1,6 +1,7 @@
 import { TABLES } from "./config.js";
 import { getAppSettings, listRecords, saveRecord } from "./storage.js";
 import { sanitizeNumber, sanitizeObject, sanitizeText, uid } from "./utils.js";
+import { validateSchedulePayload } from "./validation.js";
 
 function normalizeTime(value, fallback = "08:00") {
   const cleaned = sanitizeText(value || fallback, 5);
@@ -17,13 +18,11 @@ function calcEndTime(timeStart, durationMinutes) {
 
 export async function createScheduleEntry(payload, accountId) {
   const settings = await getAppSettings();
-  const date = sanitizeText(payload.date, 20);
-  const studentId = sanitizeText(payload.studentId, 120);
-  if (!date || !studentId) {
-    throw new Error("Date and student are required for schedule entry.");
-  }
-  const durationMinutes = Math.max(15, sanitizeNumber(payload.durationMinutes, settings.defaultLessonDuration || 60));
-  const timeStart = normalizeTime(payload.timeStart || "08:00");
+  const validated = validateSchedulePayload(payload, settings.defaultLessonDuration || 60);
+  const date = validated.date;
+  const studentId = validated.studentId;
+  const durationMinutes = Math.max(15, sanitizeNumber(validated.durationMinutes, settings.defaultLessonDuration || 60));
+  const timeStart = normalizeTime(validated.timeStart || "08:00");
   const timeEnd = normalizeTime(payload.timeEnd || calcEndTime(timeStart, durationMinutes));
 
   const record = {

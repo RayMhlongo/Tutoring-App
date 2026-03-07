@@ -33,11 +33,17 @@ export function authGateTemplate(payload) {
             </div>
             <div class="field">
               <label for="setupPassword">Password</label>
-              <input id="setupPassword" class="input" name="password" type="password" minlength="6" required>
+              <div class="input-inline">
+                <input id="setupPassword" class="input" name="password" type="password" minlength="6" required>
+                <button class="btn btn-outline btn-small" type="button" data-toggle-password data-target="setupPassword">Show</button>
+              </div>
             </div>
             <div class="field">
               <label for="setupConfirmPassword">Confirm Password</label>
-              <input id="setupConfirmPassword" class="input" name="confirmPassword" type="password" minlength="6" required>
+              <div class="input-inline">
+                <input id="setupConfirmPassword" class="input" name="confirmPassword" type="password" minlength="6" required>
+                <button class="btn btn-outline btn-small" type="button" data-toggle-password data-target="setupConfirmPassword">Show</button>
+              </div>
             </div>
             <button class="btn btn-primary" type="submit">Create Admin Login</button>
           </form>
@@ -50,7 +56,10 @@ export function authGateTemplate(payload) {
             </div>
             <div class="field">
               <label for="localPassword">Password</label>
-              <input id="localPassword" class="input" name="password" type="password" required>
+              <div class="input-inline">
+                <input id="localPassword" class="input" name="password" type="password" required>
+                <button class="btn btn-outline btn-small" type="button" data-toggle-password data-target="localPassword">Show</button>
+              </div>
             </div>
             <button class="btn btn-primary" type="submit">Login</button>
           </form>

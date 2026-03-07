@@ -64,6 +64,37 @@ function setHTML(element, html) {
   element.innerHTML = html;
 }
 
+async function renderStudentQr(canvasElement, student) {
+  const value = sanitizeText(student?.qrValue || "", 240);
+  if (!value) {
+    throw new Error("Student QR value is missing.");
+  }
+  try {
+    await generateQrToCanvas(canvasElement, value);
+    return;
+  } catch (error) {
+    const fallback = sanitizeText(student?.qrImageDataUrl || "", 500000);
+    if (!fallback) {
+      throw error;
+    }
+    await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const ctx = canvasElement.getContext("2d");
+        if (!ctx) {
+          reject(new Error("QR canvas context is unavailable."));
+          return;
+        }
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        ctx.drawImage(image, 0, 0, canvasElement.width, canvasElement.height);
+        resolve();
+      };
+      image.onerror = () => reject(new Error("Stored QR image could not be loaded."));
+      image.src = fallback;
+    });
+  }
+}
+
 function toBase64(bytes) {
   let binary = "";
   bytes.forEach((byte) => {
@@ -146,6 +177,10 @@ function buildMonthGrid(anchorDate) {
 
 function paymentViewTemplate({ students, payments, outstanding, paymentTypes }) {
   const outstandingTotal = outstanding.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+  const studentNameById = students.reduce((acc, student) => {
+    acc[student.id] = `${student.firstName || ""} ${student.surname || ""}`.trim();
+    return acc;
+  }, {});
   return `
     <section class="view" data-view-root="payments">
       <article class="card">
@@ -204,7 +239,7 @@ function paymentViewTemplate({ students, payments, outstanding, paymentTypes }) 
               ${payments.map((payment) => `
                 <tr>
                   <td>${formatDate(payment.date)}</td>
-                  <td>${escapeHtml(payment.studentId || "")}</td>
+                  <td>${escapeHtml(studentNameById[payment.studentId] || payment.studentId || "")}</td>
                   <td>${formatCurrency(payment.amountDue || 0)}</td>
                   <td>${formatCurrency(payment.amountPaid || 0)}</td>
                   <td>${formatCurrency(payment.balance || 0)}</td>
@@ -467,12 +502,21 @@ async function renderStudents() {
       await renderStudents();
       await openModal(studentQrModalTemplate(createdStudent));
       const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
-      await generateQrToCanvas(canvas, createdStudent.qrValue || "");
+      await renderStudentQr(canvas, createdStudent);
       refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
-        downloadCanvasPng(canvas, `${createdStudent.firstName}-${createdStudent.surname}-qr.png`);
+        try {
+          downloadCanvasPng(canvas, `${createdStudent.firstName}-${createdStudent.surname}-qr.png`);
+          showToast("QR downloaded.", "success");
+        } catch (error) {
+          showToast(error?.message || "QR download failed.", "error");
+        }
       });
       refs.modalRoot.querySelector("#printQrBtn")?.addEventListener("click", () => {
-        printCanvas(canvas, `${createdStudent.firstName} ${createdStudent.surname} - QR`);
+        try {
+          printCanvas(canvas, `${createdStudent.firstName} ${createdStudent.surname} - QR`);
+        } catch (error) {
+          showToast(error?.message || "QR print failed.", "error");
+        }
       });
     } catch (error) {
       showToast(error.message, "error");
@@ -539,30 +583,50 @@ async function renderStudents() {
 
   refs.main.querySelectorAll("[data-action='open-profile']").forEach((button) => {
     button.addEventListener("click", async () => {
-      const studentId = button.dataset.studentId;
-      const profileData = await getStudentProfile(studentId, accountId);
-      if (!profileData) {
-        showToast("Student profile not found.", "error");
-        return;
+      try {
+        const studentId = button.dataset.studentId;
+        const profileData = await getStudentProfile(studentId, accountId);
+        if (!profileData) {
+          showToast("Student profile not found.", "error");
+          return;
+        }
+        await openModal(studentProfileModalTemplate(profileData));
+      } catch (error) {
+        showToast(error?.message || "Unable to open student profile.", "error");
       }
-      await openModal(studentProfileModalTemplate(profileData));
     });
   });
 
   refs.main.querySelectorAll("[data-action='open-qr']").forEach((button) => {
     button.addEventListener("click", async () => {
-      const studentId = button.dataset.studentId;
-      const student = await getStudentById(studentId);
-      if (!student) return;
-      await openModal(studentQrModalTemplate(student));
-      const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
-      await generateQrToCanvas(canvas, student.qrValue || "");
-      refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
-        downloadCanvasPng(canvas, `${student.firstName}-${student.surname}-qr.png`);
-      });
-      refs.modalRoot.querySelector("#printQrBtn")?.addEventListener("click", () => {
-        printCanvas(canvas, `${student.firstName} ${student.surname} - QR`);
-      });
+      try {
+        const studentId = button.dataset.studentId;
+        const student = await getStudentById(studentId);
+        if (!student) {
+          showToast("Student not found.", "error");
+          return;
+        }
+        await openModal(studentQrModalTemplate(student));
+        const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
+        await renderStudentQr(canvas, student);
+        refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
+          try {
+            downloadCanvasPng(canvas, `${student.firstName}-${student.surname}-qr.png`);
+            showToast("QR downloaded.", "success");
+          } catch (error) {
+            showToast(error?.message || "QR download failed.", "error");
+          }
+        });
+        refs.modalRoot.querySelector("#printQrBtn")?.addEventListener("click", () => {
+          try {
+            printCanvas(canvas, `${student.firstName} ${student.surname} - QR`);
+          } catch (error) {
+            showToast(error?.message || "QR print failed.", "error");
+          }
+        });
+      } catch (error) {
+        showToast(error?.message || "Unable to open QR code.", "error");
+      }
     });
   });
 }
@@ -788,9 +852,13 @@ async function renderLessons() {
         </section>
       `);
       refs.modalRoot.querySelector("#copyParentMessageBtn")?.addEventListener("click", async () => {
-        const text = refs.modalRoot.querySelector("#parentMessageText")?.value || message;
-        await navigator.clipboard.writeText(text);
-        showToast("Message copied.", "success");
+        try {
+          const text = refs.modalRoot.querySelector("#parentMessageText")?.value || message;
+          await navigator.clipboard.writeText(text);
+          showToast("Message copied.", "success");
+        } catch (error) {
+          showToast(error?.message || "Unable to copy message.", "error");
+        }
       });
     });
   });
@@ -1378,18 +1446,27 @@ async function renderSettings() {
 }
 
 export async function navigate(view) {
-  state.currentView = view;
-  setActiveNav(view);
-  await patchAppSettings({ ui: { lastView: view } });
+  try {
+    state.currentView = view;
+    setActiveNav(view);
+    await patchAppSettings({ ui: { lastView: view } });
 
-  if (view === "dashboard") await renderDashboard();
-  if (view === "students") await renderStudents();
-  if (view === "schedule") await renderSchedule();
-  if (view === "lessons") await renderLessons();
-  if (view === "payments") await renderPayments();
-  if (view === "expenses") await renderExpenses();
-  if (view === "reports") await renderReports();
-  if (view === "settings") await renderSettings();
+    if (view === "dashboard") await renderDashboard();
+    if (view === "students") await renderStudents();
+    if (view === "schedule") await renderSchedule();
+    if (view === "lessons") await renderLessons();
+    if (view === "payments") await renderPayments();
+    if (view === "expenses") await renderExpenses();
+    if (view === "reports") await renderReports();
+    if (view === "settings") await renderSettings();
+  } catch (error) {
+    showToast(error?.message || "Unable to load this section.", "error");
+    if (view !== "dashboard") {
+      state.currentView = "dashboard";
+      setActiveNav("dashboard");
+      await renderDashboard();
+    }
+  }
 }
 
 export async function initUI(domRefs) {

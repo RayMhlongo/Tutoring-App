@@ -1,15 +1,17 @@
 import { TABLES } from "./config.js";
 import { getAppSettings, getRecordById, listRecords, saveRecord } from "./storage.js";
 import { sanitizeNumber, sanitizeText, todayISODate, uid } from "./utils.js";
+import { validateLessonPayload } from "./validation.js";
 
 export async function createLesson(payload, accountId) {
   const settings = await getAppSettings();
-  const date = sanitizeText(payload.date || todayISODate(), 20);
-  const studentId = sanitizeText(payload.studentId, 120);
-  const subject = sanitizeText(payload.subject || "General", 80);
-  if (!studentId) {
-    throw new Error("Student is required.");
-  }
+  const validated = validateLessonPayload({
+    ...payload,
+    date: payload.date || todayISODate()
+  }, settings.defaultLessonDuration || 60);
+  const date = validated.date;
+  const studentId = validated.studentId;
+  const subject = validated.subject;
 
   const record = {
     id: payload.id || uid("les"),
@@ -17,7 +19,7 @@ export async function createLesson(payload, accountId) {
     date,
     subject,
     category: sanitizeText(payload.category || "", 80),
-    durationMinutes: sanitizeNumber(payload.durationMinutes, settings.defaultLessonDuration || 60),
+    durationMinutes: sanitizeNumber(validated.durationMinutes, settings.defaultLessonDuration || 60),
     lessonNotes: sanitizeText(payload.lessonNotes, 3000),
     homeworkAssigned: sanitizeText(payload.homeworkAssigned, 3000),
     progressSummary: sanitizeText(payload.progressSummary, 3000),

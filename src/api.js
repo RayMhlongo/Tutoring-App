@@ -1,4 +1,8 @@
 import { sanitizeObject, sanitizeText } from "./utils.js";
+import { logError, logWarn } from "./logger.js";
+
+const API_MAX_ATTEMPTS = 3;
+const API_BASE_RETRY_MS = 650;
 
 export function normalizeEndpoint(url) {
   const endpoint = sanitizeText(url, 1400);
@@ -7,22 +11,49 @@ export function normalizeEndpoint(url) {
   return endpoint;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function shouldRetryStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 async function postForm(endpoint, params) {
   const payload = new URLSearchParams(params);
-  const response = await fetch(endpoint, {
-    method: "POST",
-    body: payload
-  });
+  let lastError = null;
 
-  if (!response.ok) {
-    throw new Error(`Network error (${response.status})`);
+  for (let attempt = 1; attempt <= API_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: payload
+      });
+      if (!response.ok) {
+        if (attempt < API_MAX_ATTEMPTS && shouldRetryStatus(response.status)) {
+          logWarn("Transient API error, retrying", { endpoint, status: response.status, attempt });
+          await sleep(API_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+          continue;
+        }
+        throw new Error(`Network error (${response.status})`);
+      }
+      const raw = await response.text();
+      try {
+        return JSON.parse(raw);
+      } catch (parseError) {
+        throw new Error("Invalid response from Google Apps Script.");
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt < API_MAX_ATTEMPTS) {
+        logWarn("API request failed, retrying", { endpoint, attempt }, error);
+        await sleep(API_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+        continue;
+      }
+      logError("API request failed", { endpoint, attempts: API_MAX_ATTEMPTS }, error);
+    }
   }
-  const raw = await response.text();
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error("Invalid response from Google Apps Script.");
-  }
+  throw lastError || new Error("API request failed.");
 }
 
 export async function pingEndpoint(endpoint) {
