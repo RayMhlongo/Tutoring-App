@@ -61,13 +61,25 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Configure Android SDK path
+        run: |
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > android/local.properties
+
       - name: Build Debug APK
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee ../gradle-build.log
+
+      - name: Upload Gradle Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gradle-build-log
+          path: gradle-build.log
 
       - name: Upload APK Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: xfactor-tutoring-debug-apk
