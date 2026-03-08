@@ -1,7 +1,7 @@
 {
-  "name": "Data Insights by Ray Platform",
-  "short_name": "DIR Platform",
-  "description": "Offline-first, multi-tenant tutoring and analytics platform by Data Insights by Ray.",
+  "name": "EduPulse by Ray",
+  "short_name": "EduPulse",
+  "description": "Offline-first, multi-tenant tutoring SaaS platform by Data Insights by Ray.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

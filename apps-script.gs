@@ -19,6 +19,7 @@ var TABLE_SHEETS = {
 
 var ROW_HEADERS = ["id", "tenantId", "accountId", "createdAt", "updatedAt", "deleted", "payload"];
 var SYNC_HEADERS = ["changeId", "tenantId", "accountId", "table", "recordId", "timestamp", "status"];
+var TENANT_HEADERS = ["tenantId", "tenantName", "adminEmail", "plan", "status", "driveFolderId", "sheetId", "createdAt", "updatedAt"];
 
 function doGet(e) { return handleRequest(e); }
 function doPost(e) { return handleRequest(e); }
@@ -73,6 +74,34 @@ function handleRequest(e) {
       }
       var file = saveQrToDrive(qrTenant, qrStudentId, qrData);
       return json({ ok: true, fileId: file.getId(), fileName: file.getName() });
+    }
+
+    if (action === "onboardTenant") {
+      var tenantName = text(e.parameter.tenantName);
+      var adminEmail = text(e.parameter.adminEmail);
+      var plan = text(e.parameter.plan) || "starter";
+      var onboarded = onboardTenant(ss, tenantName, adminEmail, plan);
+      return json({ ok: true, tenant: onboarded, endpoint: ScriptApp.getService().getUrl() });
+    }
+
+    if (action === "listTenants") {
+      return json({ ok: true, tenants: listTenants(ss) });
+    }
+
+    if (action === "updateTenantStatus") {
+      var tenantId = text(e.parameter.tenantId);
+      var status = text(e.parameter.status) || "active";
+      if (!tenantId) return json({ ok: false, error: "tenantId is required." });
+      return json(updateTenantStatus(ss, tenantId, status));
+    }
+
+    if (action === "createStripeCheckout") {
+      var stripeTenant = text(e.parameter.tenantId);
+      var stripePlan = text(e.parameter.plan) || "starter";
+      var stripeEmail = text(e.parameter.email);
+      var stripePriceId = text(e.parameter.priceId);
+      var checkout = createStripeCheckout(stripeTenant, stripePlan, stripeEmail, stripePriceId);
+      return json({ ok: true, url: checkout.url, sessionId: checkout.id });
     }
 
     return json({ ok: false, error: "Unknown action." });
@@ -238,6 +267,144 @@ function saveQrToDrive(tenantId, studentId, dataUrl) {
   var tenantFolder = ensureFolder(tenantsFolder, tenantId);
   var qrFolder = ensureFolder(tenantFolder, "QRcodes");
   return qrFolder.createFile(blob);
+}
+
+function slugify(value) {
+  return text(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function generateTenantId(tenantName) {
+  var slug = slugify(tenantName) || "tenant";
+  var suffix = Utilities.getUuid().slice(0, 6);
+  return slug + "-" + suffix;
+}
+
+function ensureTenantRegistrySheet(ss) {
+  return ensureSheet(ss, "Tenants", TENANT_HEADERS);
+}
+
+function listTenants(ss) {
+  var sheet = ensureTenantRegistrySheet(ss);
+  var rows = sheet.getDataRange().getValues();
+  var output = [];
+  for (var i = 1; i < rows.length; i++) {
+    output.push({
+      tenantId: text(rows[i][0]),
+      tenantName: text(rows[i][1]),
+      adminEmail: text(rows[i][2]),
+      plan: text(rows[i][3]),
+      status: text(rows[i][4]) || "active",
+      driveFolderId: text(rows[i][5]),
+      sheetId: text(rows[i][6]),
+      createdAt: text(rows[i][7]),
+      updatedAt: text(rows[i][8])
+    });
+  }
+  return output;
+}
+
+function updateTenantStatus(ss, tenantId, status) {
+  var sheet = ensureTenantRegistrySheet(ss);
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(tenantId)) {
+      sheet.getRange(i + 1, 5).setValue(status);
+      sheet.getRange(i + 1, 9).setValue(new Date().toISOString());
+      return { ok: true, tenantId: tenantId, status: status };
+    }
+  }
+  return { ok: false, error: "Tenant not found." };
+}
+
+function initializeTenantSpreadsheet(tenantName) {
+  var file = SpreadsheetApp.create(tenantName + " - EduPulseDB");
+  var tenantSheet = file.getSheets()[0];
+  tenantSheet.setName("Students");
+  tenantSheet.getRange(1, 1, 1, ROW_HEADERS.length).setValues([ROW_HEADERS]);
+  var names = ["Tutors", "Attendance", "Payments"];
+  for (var i = 0; i < names.length; i++) {
+    var sh = file.insertSheet(names[i]);
+    sh.getRange(1, 1, 1, ROW_HEADERS.length).setValues([ROW_HEADERS]);
+  }
+  return file.getId();
+}
+
+function onboardTenant(ss, tenantName, adminEmail, plan) {
+  if (!tenantName) throw new Error("tenantName is required.");
+  if (!adminEmail) throw new Error("adminEmail is required.");
+
+  var tenantId = generateTenantId(tenantName);
+  var root = ensureFolder(DriveApp.getRootFolder(), "DataInsightsByRay");
+  var tenantsFolder = ensureFolder(root, "Tenants");
+  var tenantFolder = ensureFolder(tenantsFolder, tenantId);
+  ensureFolder(tenantFolder, "Students");
+  ensureFolder(tenantFolder, "Assignments");
+  ensureFolder(tenantFolder, "QRcodes");
+  ensureFolder(tenantFolder, "Reports");
+
+  var sheetId = initializeTenantSpreadsheet(tenantName);
+  var now = new Date().toISOString();
+  var registry = ensureTenantRegistrySheet(ss);
+  registry.appendRow([tenantId, tenantName, adminEmail, plan || "starter", "active", tenantFolder.getId(), sheetId, now, now]);
+
+  return {
+    tenantId: tenantId,
+    tenantName: tenantName,
+    adminEmail: adminEmail,
+    plan: plan || "starter",
+    status: "active",
+    driveFolderId: tenantFolder.getId(),
+    sheetId: sheetId
+  };
+}
+
+function createStripeCheckout(tenantId, plan, email, priceId) {
+  var props = PropertiesService.getScriptProperties();
+  var secretKey = text(props.getProperty("STRIPE_SECRET_KEY"));
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY script property is missing.");
+  }
+  var resolvedPriceId = priceId || text(props.getProperty("STRIPE_PRICE_" + String(plan || "starter").toUpperCase()));
+  if (!resolvedPriceId) {
+    throw new Error("Stripe price ID is missing for selected plan.");
+  }
+
+  var successUrl = text(props.getProperty("STRIPE_SUCCESS_URL")) || "https://example.com/success";
+  var cancelUrl = text(props.getProperty("STRIPE_CANCEL_URL")) || "https://example.com/cancel";
+
+  var payload = {
+    mode: "subscription",
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer_email: email,
+    "line_items[0][price]": resolvedPriceId,
+    "line_items[0][quantity]": "1",
+    "metadata[tenantId]": tenantId,
+    "metadata[plan]": plan || "starter"
+  };
+
+  var form = [];
+  var keys = Object.keys(payload);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    form.push(encodeURIComponent(key) + "=" + encodeURIComponent(text(payload[key])));
+  }
+
+  var response = UrlFetchApp.fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "post",
+    muteHttpExceptions: true,
+    headers: {
+      Authorization: "Bearer " + secretKey,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    payload: form.join("&")
+  });
+
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    throw new Error("Stripe checkout creation failed: " + response.getContentText());
+  }
+
+  return parseJSON(response.getContentText(), {});
 }
 
 function parseJSON(raw, fallback) {

@@ -1,8 +1,17 @@
-import { pingEndpoint, fetchRemoteSnapshot, exportSnapshotToGoogle, saveStudentQrToDrive } from "./api.js";
+import {
+  pingEndpoint,
+  fetchRemoteSnapshot,
+  exportSnapshotToGoogle,
+  saveStudentQrToDrive,
+  fetchTenantRegistry,
+  updateTenantStatus
+} from "./api.js";
 import { askGemini, listAiMessages } from "./ai.js";
 import { getSession, logout as clearAuthSession, setLocalAdminCredentials, updateAuthSettings } from "./auth.js";
+import { clearStoredGoogleToken, connectGoogleWorkspace, getStoredGoogleToken } from "./google.js";
 import { logAttendance } from "./attendance.js";
 import { backupToGoogleDrive, exportBackupCsv, exportBackupJson, restoreFromLocalFile, restoreLatestFromGoogleDrive } from "./backup.js";
+import { getBillingState, redirectToStripeCheckout, startStripePlanCheckout } from "./billing.js";
 import { createLesson, downloadLessonPdf, listLessons } from "./lessons.js";
 import { createExpense, createPayment, getOutstandingPayments, listExpenses, listPayments } from "./payments.js";
 import { buildAnalytics } from "./analytics.js";
@@ -30,6 +39,7 @@ import {
 } from "./storage.js";
 import { createStudent, getStudentById, getStudentProfile, listStudents, updateStudent } from "./students.js";
 import { createTutor, listTutors } from "./tutors.js";
+import { startTenantOnboarding } from "./onboarding.js";
 import {
   StudentQrScanner,
   downloadCanvasPng,
@@ -143,6 +153,34 @@ async function closeModal() {
   modalCleanup = null;
   refs.modalRoot.classList.remove("is-open");
   refs.modalRoot.innerHTML = "";
+}
+
+async function maybeRunOnboarding() {
+  const [settings, session] = await Promise.all([
+    getAppSettings(),
+    getSession()
+  ]);
+  if (settings.onboarding?.completed) return;
+
+  const { onboardingModalTemplate } = await import("../components/onboarding.js");
+  await openModal(onboardingModalTemplate(session?.email || ""));
+  refs.modalRoot.querySelector("#tenantOnboardingForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const result = await startTenantOnboarding({
+        tenantName: form.get("tenantName"),
+        adminEmail: form.get("adminEmail"),
+        plan: form.get("plan")
+      });
+      await closeModal();
+      await refreshQueueCount();
+      showToast(`Tenant ready: ${result.tenantId || "created"}.`, "success");
+      await navigate("dashboard");
+    } catch (error) {
+      showToast(error?.message || "Tenant onboarding failed.", "error");
+    }
+  });
 }
 
 async function getViewData() {
@@ -441,11 +479,13 @@ async function renderDashboard() {
     24
   ).toLowerCase();
   const plan = settings.planCatalog?.[profilePlanKey] || null;
+  const billing = await getBillingState();
 
   setHTML(refs.main, dashboardViewTemplate({
     ...snapshot,
     analytics,
     plan,
+    billing,
     superAdmin: settings.superAdmin?.enabled ? await buildSuperAdminSnapshot() : null,
     filters: state.dashboardFilters,
     filterOptions: {
@@ -498,6 +538,31 @@ async function renderDashboard() {
       .map(([tutorId, count]) => ({ tutor: tutorNameById[tutorId] || tutorId, count }))
   });
   updateHeaderProfile(profile);
+
+  refs.main.querySelector("#startStripeCheckoutBtn")?.addEventListener("click", async () => {
+    try {
+      const activeProfile = await getActiveProfile();
+      const selectedPlan = sanitizeText(
+        settings.tenantPlans?.[activeProfile.id]
+        || activeProfile.plan
+        || profilePlanKey,
+        20
+      ).toLowerCase() || "starter";
+      const checkout = await startStripePlanCheckout(selectedPlan, activeProfile.gmail || "");
+      if (checkout?.url) {
+        window.open(checkout.url, "_blank", "noopener");
+        showToast("Stripe checkout opened in a new tab.", "success");
+      } else if (checkout?.sessionId && checkout?.publishableKey) {
+        await redirectToStripeCheckout(checkout);
+        showToast("Redirecting to Stripe checkout.", "success");
+      } else {
+        showToast("Stripe checkout session created.", "success");
+      }
+      await renderDashboard();
+    } catch (error) {
+      showToast(error?.message || "Stripe checkout failed.", "error");
+    }
+  });
 
   refs.main.querySelector("#dashboardFilterApplyForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -1196,16 +1261,32 @@ function applyUniqueAdd(list, value) {
   return [...list, clean];
 }
 
+async function canOpenView(view) {
+  if (view === "dashboard" || view === "settings") return true;
+  const billing = await getBillingState();
+  if (!billing.allowed) {
+    showToast("Active subscription required for this section. Open Dashboard to subscribe.", "error");
+    return false;
+  }
+  return true;
+}
+
 async function renderSettings() {
   const { settings, accountId, profile } = await getViewData();
   const session = await getSession();
+  const googleToken = await getStoredGoogleToken();
   const developer = settings.developer || {};
   const hasDeveloperPassword = Boolean(developer.passwordSalt && developer.passwordHash);
   if (!hasDeveloperPassword) {
     state.developerUnlocked = false;
   }
   const { settingsTemplate } = await import("../components/settings.js");
-  setHTML(refs.main, settingsTemplate({ settings, session, isDeveloperUnlocked: state.developerUnlocked }));
+  setHTML(refs.main, settingsTemplate({
+    settings,
+    session,
+    isDeveloperUnlocked: state.developerUnlocked,
+    googleWorkspaceConnected: Boolean(googleToken?.access_token)
+  }));
   updateHeaderProfile(profile);
 
   refs.main.querySelector("#developerSetPasswordForm")?.addEventListener("submit", async (event) => {
@@ -1349,8 +1430,8 @@ async function renderSettings() {
     const form = new FormData(event.currentTarget);
     const themeMode = sanitizeText(form.get("themeMode"), 10) === "dark" ? "dark" : "light";
     await patchAppSettings({
-      businessName: sanitizeText(form.get("businessName"), 120) || "Data Insights by Ray",
-      appName: sanitizeText(form.get("appName"), 120) || "Data Insights by Ray Platform",
+      businessName: sanitizeText(form.get("businessName"), 120) || "EduPulse by Ray",
+      appName: sanitizeText(form.get("appName"), 120) || "EduPulse by Ray",
       defaultLessonDuration: Math.max(15, sanitizeNumber(form.get("defaultLessonDuration"), 60)),
       qrFormat: sanitizeText(form.get("qrFormat"), 160) || "DIR:{tenantId}:{id}",
       ui: {
@@ -1361,9 +1442,9 @@ async function renderSettings() {
     applyThemeMode(themeMode, document.getElementById("themeToggleBtn"));
     const brandTitle = document.getElementById("brandTitle");
     if (brandTitle) {
-      brandTitle.textContent = sanitizeText(form.get("businessName"), 120) || "Data Insights by Ray";
+      brandTitle.textContent = sanitizeText(form.get("businessName"), 120) || "EduPulse by Ray";
     }
-    document.title = sanitizeText(form.get("appName"), 120) || "Data Insights by Ray Platform";
+    document.title = sanitizeText(form.get("appName"), 120) || "EduPulse by Ray";
     showToast("Platform settings saved.", "success");
     await renderSettings();
   });
@@ -1400,6 +1481,27 @@ async function renderSettings() {
     await renderSettings();
   });
 
+  refs.main.querySelector("#billingSettingsForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await patchAppSettings({
+      billing: {
+        ...(settings.billing || {}),
+        enabled: true,
+        requireActiveSubscription: String(form.get("requireActiveSubscription")) === "true",
+        stripePublishableKey: sanitizeText(form.get("stripePublishableKey"), 240),
+        stripeCheckoutEndpoint: sanitizeText(form.get("stripeCheckoutEndpoint"), 1400),
+        stripePriceIds: {
+          starter: sanitizeText(form.get("starterPriceId"), 120),
+          growth: sanitizeText(form.get("growthPriceId"), 120),
+          pro: sanitizeText(form.get("proPriceId"), 120)
+        }
+      }
+    });
+    showToast("Billing settings updated.", "success");
+    await renderSettings();
+  });
+
   refs.main.querySelector("#localAdminPasswordForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -1417,6 +1519,22 @@ async function renderSettings() {
     } catch (error) {
       showToast(error.message, "error");
     }
+  });
+
+  refs.main.querySelector("#connectGoogleWorkspaceBtn")?.addEventListener("click", async () => {
+    try {
+      await connectGoogleWorkspace(settings.auth || {});
+      showToast("Google Drive/Sheets access granted.", "success");
+      await renderSettings();
+    } catch (error) {
+      showToast(error?.message || "Google Drive/Sheets connection failed.", "error");
+    }
+  });
+
+  refs.main.querySelector("#disconnectGoogleWorkspaceBtn")?.addEventListener("click", async () => {
+    await clearStoredGoogleToken();
+    showToast("Google Drive/Sheets access token cleared.", "success");
+    await renderSettings();
   });
 
   refs.main.querySelectorAll("[data-action='activate-profile']").forEach((button) => {
@@ -1683,10 +1801,59 @@ async function renderSettings() {
       showToast(error.message, "error");
     }
   });
+
+  refs.main.querySelectorAll("[data-action='tenant-status']").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const tenantId = sanitizeText(button.dataset.tenantId, 120);
+      const nextStatus = sanitizeText(button.dataset.status, 24) || "active";
+      if (!tenantId) return;
+      try {
+        const active = await getActiveProfile();
+        if (active?.endpoint) {
+          await updateTenantStatus({ endpoint: active.endpoint }, { tenantId, status: nextStatus });
+        }
+      } catch (error) {
+        showToast(`Remote tenant status update failed: ${error?.message || "Unknown error"}`, "error");
+      }
+
+      const nextRegistry = (settings.tenantRegistry || []).map((tenant) => {
+        if (tenant.tenantId !== tenantId) return tenant;
+        return { ...tenant, status: nextStatus };
+      });
+      const nextProfiles = (settings.syncProfiles || []).map((entry) => {
+        if (entry.tenantId !== tenantId) return entry;
+        return { ...entry, subscriptionStatus: nextStatus === "active" ? "active" : "inactive" };
+      });
+      await patchAppSettings({
+        tenantRegistry: nextRegistry,
+        syncProfiles: nextProfiles
+      });
+      showToast(`Tenant ${tenantId} set to ${nextStatus}.`, "success");
+      await renderSettings();
+    });
+  });
+
+  refs.main.querySelector("#refreshTenantRegistryBtn")?.addEventListener("click", async () => {
+    try {
+      const active = await getActiveProfile();
+      if (!active?.endpoint) {
+        throw new Error("Active profile has no endpoint configured.");
+      }
+      const tenants = await fetchTenantRegistry(active);
+      await patchAppSettings({ tenantRegistry: tenants });
+      showToast("Tenant registry refreshed from backend.", "success");
+      await renderSettings();
+    } catch (error) {
+      showToast(error?.message || "Tenant registry refresh failed.", "error");
+    }
+  });
 }
 
 export async function navigate(view) {
   try {
+    if (!await canOpenView(view)) {
+      view = "dashboard";
+    }
     state.currentView = view;
     setActiveNav(view);
     await patchAppSettings({ ui: { lastView: view } });
@@ -1750,6 +1917,7 @@ export async function initUI(domRefs) {
   state.scheduleAnchorDate = settings.ui?.scheduleAnchorDate || todayISODate();
   state.currentView = settings.ui?.lastView || "dashboard";
   await navigate(state.currentView);
+  await maybeRunOnboarding();
 }
 
 export function setConnectionStatusLabel(isOnline) {

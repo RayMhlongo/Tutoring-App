@@ -36,11 +36,7 @@ jobs:
         run: npm install
 
       - name: Prepare web assets for Capacitor
-        run: |
-          rm -rf www
-          mkdir -p www
-          cp index.html manifest.json offline.html service-worker.js www/
-          cp -R assets components icons src styles www/
+        run: npm run prepare:web
 
       - name: Ensure Android platform
         run: |

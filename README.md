@@ -1,62 +1,107 @@
-# Data Insights by Ray Platform
+# EduPulse by Ray
 
-Offline-first, multi-tenant tutoring operations platform that runs as:
+Offline-first multi-tenant tutoring SaaS platform by Data Insights by Ray.
+
+Runs as:
 - Web app
-- Progressive Web App (installable)
-- Android APK (Capacitor)
+- Installable PWA
+- Android app (Capacitor APK)
 
-## Core Features
-- Secure auth:
-  - Local admin login (offline-capable)
-  - Optional Google login (allowed-email restriction)
-  - Cached sessions for offline reuse
-- Multi-tenant data model:
-  - `tenantId` on all runtime records
-  - Per-account/tenant isolation
-  - SuperAdmin cross-tenant dashboard rollup
+## Architecture
+- Frontend shell: `index.html`, `src/app.js`, `src/ui.js`, `components/*`
+- Data layer: `src/storage.js` (Dexie + IndexedDB)
+- Sync engine: `src/sync.js` + `src/api.js`
+- Auth: `src/auth.js` (local + Google login)
+- Google OAuth token access for Drive/Sheets: `src/google.js`
+- AI assistant: `src/ai.js` (Gemini via `@google/genai`)
+- SaaS onboarding and billing: `src/onboarding.js`, `src/billing.js`
+- Backend (Google Apps Script): `apps-script.gs`
+- Offline runtime: `service-worker.js`
+
+## Multi-Tenant Model
+- All domain records include `tenantId` and `accountId`.
+- Tenant context is selected by active sync profile (`settings.syncProfiles`).
+- Sync payloads always send `tenantId`, `accountId`, and unique `changeId`.
+- Tenant registry and status controls are managed in Settings (APP Developer lock).
+
+## Features
+- Authentication:
+  - Local admin login (offline capable)
+  - Google login (allowed email restriction)
+  - Session caching for offline use
 - Tutoring operations:
-  - Tutors
-  - Students (dynamic custom profile fields)
-  - Schedule (daily/weekly/monthly)
-  - QR check-in attendance
-  - Lessons and parent communication
-  - Payments and expenses
-  - Reports and exports (CSV/Excel/PDF)
-- AI Assistant:
-  - Gemini integration
-  - Tenant-scoped conversation history
-- Sync and backup:
-  - IndexedDB-first writes (Dexie)
-  - Sync queue to Google Apps Script + Google Sheets
-  - Google Drive backup/restore support
-- Performance and reliability:
-  - Runtime logger
-  - Input validation
-  - Retry/backoff on sync API calls
-  - Offline service worker with background sync triggers
+  - Students, tutors, lessons, schedule, attendance, payments, expenses
+  - QR generation + scan check-in flow
+  - Reports/export (CSV, Excel, PDF)
+- SaaS:
+  - Tenant onboarding flow
+  - Super admin tenant controls and analytics rollup
+  - Stripe subscription checkout support
+- AI:
+  - Gemini assistant (`gemini-2.0-flash` default)
+  - Conversation history scoped per tenant/account/user
+- Offline-first:
+  - IndexedDB writes first
+  - Sync queue retry/backoff
+  - Service worker caching + background sync trigger
 
-## Project Layout
-```text
-data-insights-by-ray-platform
-  /src
-  /components
-  /styles
-  /assets
-  /icons
-  /docs/ai-handoff
-  service-worker.js
-  manifest.json
-  index.html
-  apps-script.gs
-  capacitor.config.json
-  .github/workflows/android-apk.yml
+## Environment Variables
+Create `.env` in project root:
+
+```bash
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
+VITE_GEMINI_API_KEY=your_gemini_api_key
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+VITE_STRIPE_CHECKOUT_ENDPOINT=https://script.google.com/macros/s/.../exec
 ```
 
-## Local Development
+Notes:
+- `.env` is ignored by git.
+- `npm run prepare:env` generates `env.js` from `.env`.
+- Do not commit real secrets.
+
+## Setup
 ```bash
 npm install
+npm run prepare:web
 npm run serve
 ```
+
+Open `http://localhost:4173`.
+
+## Google Cloud Configuration
+1. Create OAuth Client ID in Google Cloud Console (Web application).
+2. Add authorized origins (for local dev and production host).
+3. Set `VITE_GOOGLE_CLIENT_ID`.
+4. Create Gemini API key and set `VITE_GEMINI_API_KEY`.
+5. Create a Google Sheet + Apps Script project.
+6. Paste `apps-script.gs` and deploy as Web App.
+7. Save endpoint in APP Developer settings or `VITE_STRIPE_CHECKOUT_ENDPOINT` for billing checkout action.
+
+Apps Script actions implemented:
+- `ping`
+- `syncChange`
+- `getAll`
+- `exportSnapshot`
+- `saveQr`
+- `onboardTenant`
+- `listTenants`
+- `updateTenantStatus`
+- `createStripeCheckout`
+
+## Stripe Setup (Optional)
+In Apps Script project properties, set:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_STARTER`
+- `STRIPE_PRICE_GROWTH`
+- `STRIPE_PRICE_PRO`
+- `STRIPE_SUCCESS_URL`
+- `STRIPE_CANCEL_URL`
+
+In app settings (APP Developer -> Billing), set:
+- Stripe publishable key
+- Checkout endpoint
+- Plan price IDs (optional override)
 
 ## Tests
 ```bash
@@ -64,47 +109,32 @@ npm test
 npm run stress:test
 ```
 
-## Google Backend Setup (Free)
-1. Open Google Sheet.
-2. Extensions -> Apps Script.
-3. Paste `apps-script.gs`.
-4. Deploy Web App (Execute as Me, Access Anyone).
-5. Copy deployment URL.
-6. In app Settings -> APP Developer -> Google Sync Accounts, save endpoint.
+Stress profile:
+- 1000 students
+- 10000 attendance rows
+- 5000 payments
 
-Supported Apps Script actions:
-- `ping`
-- `syncChange`
-- `getAll`
-- `exportSnapshot`
-- `saveQr`
-
-## PWA
-- `manifest.json` includes standalone install metadata.
-- `service-worker.js` caches app shell + runtime assets.
-
-## Android (Capacitor)
+## Build Android APK
 ```bash
-npm install @capacitor/core @capacitor/android
-npx cap add android
-npx cap sync android
-npx cap open android
+npm run android:sync
+cd android
+gradlew assembleDebug
 ```
 
-## GitHub Actions APK
+Generated APK:
+- `android/app/build/outputs/apk/debug/app-debug.apk`
+
+## GitHub Actions APK Workflow
 Workflow: `.github/workflows/android-apk.yml`
 
-Outputs:
-- APK artifact: `data-insights-debug-apk`
-- Build log artifact: `android-gradle-build-log`
+Artifacts:
+- `data-insights-debug-apk`
+- `android-gradle-build-log`
 
-Download path:
-- GitHub -> Actions -> choose run -> Artifacts -> `data-insights-debug-apk`
+## Deployment
+- Web: static hosting (optional for browser use)
+- PWA: same web build with manifest + service worker
+- Android: Capacitor build from `www` assets
 
-## Brand Assets
-- Logo: `assets/logo/data-insights-logo.svg`
-- App icons: `icons/*`
-
-## AI Handoff
-Architecture and implementation summary for other AI tools:
-- `docs/ai-handoff/README.md`
+## AI/Developer Handoff
+See: `docs/ai-handoff/README.md`

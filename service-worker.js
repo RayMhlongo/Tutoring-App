@@ -1,16 +1,18 @@
-const CACHE_VERSION = "data-insights-v2.1.0";
+const CACHE_VERSION = "data-insights-v2.2.0";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./env.js",
   "./offline.html",
   "./manifest.json",
   "./styles/theme.css",
   "./styles/main.css",
   "./src/app.js",
   "./src/config.js",
+  "./src/env.js",
   "./src/utils.js",
   "./src/validation.js",
   "./src/logger.js",
@@ -19,10 +21,12 @@ const APP_SHELL = [
   "./src/sync.js",
   "./src/api.js",
   "./src/auth.js",
+  "./src/google.js",
   "./src/backup.js",
   "./src/analytics.js",
   "./src/charts.js",
   "./src/ai.js",
+  "./src/onboarding.js",
   "./src/qr.js",
   "./src/scheduler.js",
   "./src/students.js",
@@ -40,6 +44,7 @@ const APP_SHELL = [
   "./components/lessonEditor.js",
   "./components/tutors.js",
   "./components/aiAssistant.js",
+  "./components/onboarding.js",
   "./components/qrScanner.js",
   "./components/settings.js",
   "./assets/logo/data-insights-logo.svg",

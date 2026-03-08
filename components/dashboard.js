@@ -24,6 +24,7 @@ export function dashboardViewTemplate(data) {
   const analytics = data.analytics || {};
   const superAdmin = data.superAdmin || null;
   const plan = data.plan || null;
+  const billing = data.billing || null;
   const filters = data.filters || {};
   const filterOptions = data.filterOptions || { students: [], subjects: [], grades: [] };
 
@@ -94,6 +95,12 @@ export function dashboardViewTemplate(data) {
           <div class="metric"><strong>${Number(plan.maxStudents || 0)}</strong><span>Student limit</span></div>
           <div class="metric"><strong>${Number(plan.maxTutors || 0)}</strong><span>Tutor limit</span></div>
         </div>
+        ${billing ? `
+          <div class="action-row">
+            <span class="badge ${billing.allowed ? "badge-success" : "badge-warning"}">Subscription: ${escapeHtml((billing.status || "unknown").toUpperCase())}</span>
+            <button class="btn btn-secondary btn-small" id="startStripeCheckoutBtn" type="button">Subscribe / Manage Billing</button>
+          </div>
+        ` : ""}
       </article>
       ` : ""}
 
@@ -104,6 +111,7 @@ export function dashboardViewTemplate(data) {
         </div>
         <div class="grid cols-3">
           <div class="metric"><strong>${superAdmin.tenantCount ?? 0}</strong><span>Active tenants</span></div>
+          <div class="metric"><strong>${superAdmin.activeTenants ?? 0}</strong><span>Enabled tenants</span></div>
           <div class="metric"><strong>${superAdmin.students ?? 0}</strong><span>Students (all tenants)</span></div>
           <div class="metric"><strong>${superAdmin.tutors ?? 0}</strong><span>Tutors (all tenants)</span></div>
           <div class="metric"><strong>${superAdmin.lessons ?? 0}</strong><span>Lessons logged</span></div>

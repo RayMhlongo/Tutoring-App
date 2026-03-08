@@ -3,11 +3,17 @@ import { DEFAULT_SETTINGS, TABLES } from "../src/config.js";
 
 const TABLE_KEYS = [
   TABLES.students,
+  TABLES.tutors,
   TABLES.lessons,
+  TABLES.assignments,
   TABLES.attendance,
   TABLES.payments,
   TABLES.expenses,
   TABLES.schedule,
+  TABLES.messages,
+  TABLES.notifications,
+  TABLES.performanceMetrics,
+  TABLES.businessMetrics,
   TABLES.reports,
   TABLES.syncQueue,
   TABLES.settings

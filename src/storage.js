@@ -178,6 +178,7 @@ export async function saveSyncProfile(profileInput) {
     gmail: sanitizeEmail(profileInput.gmail || ""),
     tenantId,
     plan: sanitizeText(profileInput.plan || settings.tenantPlans?.[profileInput.id || ""] || "starter", 20).toLowerCase() || "starter",
+    subscriptionStatus: sanitizeText(profileInput.subscriptionStatus || "trial", 24).toLowerCase() || "trial",
     endpoint: sanitizeText(profileInput.endpoint || "", 1000),
     active: Boolean(profileInput.active)
   };
@@ -236,7 +237,8 @@ export async function getActiveProfile() {
   }
   return {
     ...active,
-    tenantId: normalizeTenantId(active.tenantId || active.id || APP_INFO.tenantId)
+    tenantId: normalizeTenantId(active.tenantId || active.id || APP_INFO.tenantId),
+    subscriptionStatus: sanitizeText(active.subscriptionStatus || "trial", 24).toLowerCase() || "trial"
   };
 }
 

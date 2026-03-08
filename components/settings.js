@@ -61,6 +61,7 @@ export function settingsTemplate(data) {
   const isDeveloperUnlocked = Boolean(data.isDeveloperUnlocked);
   const developerPasswordSet = Boolean(developer.passwordSalt && developer.passwordHash);
   const profiles = settings.syncProfiles || [];
+  const googleWorkspaceConnected = Boolean(data.googleWorkspaceConnected);
   return `
     <section class="view" data-view-root="settings">
       <article class="card">
@@ -70,11 +71,11 @@ export function settingsTemplate(data) {
         <form id="platformSettingsForm" class="split-3">
           <div class="field">
             <label for="businessName">Business Name</label>
-            <input id="businessName" class="input" name="businessName" type="text" value="${escapeHtml(settings.businessName || "Data Insights by Ray")}" required>
+            <input id="businessName" class="input" name="businessName" type="text" value="${escapeHtml(settings.businessName || "EduPulse by Ray")}" required>
           </div>
           <div class="field">
             <label for="appName">App Name</label>
-            <input id="appName" class="input" name="appName" type="text" value="${escapeHtml(settings.appName || settings.businessName || "Data Insights by Ray Platform")}" required>
+            <input id="appName" class="input" name="appName" type="text" value="${escapeHtml(settings.appName || settings.businessName || "EduPulse by Ray")}" required>
           </div>
           <div class="field">
             <label for="defaultLessonDuration">Default lesson duration (minutes)</label>
@@ -194,6 +195,11 @@ export function settingsTemplate(data) {
           </label>
           <button class="btn btn-outline" type="submit">Update Local Password</button>
         </form>
+        <div class="action-row">
+          <span class="badge ${googleWorkspaceConnected ? "badge-success" : "badge-warning"}">Google Drive/Sheets: ${googleWorkspaceConnected ? "Connected" : "Not connected"}</span>
+          <button class="btn btn-secondary btn-small" type="button" id="connectGoogleWorkspaceBtn">Connect Google Drive & Sheets</button>
+          <button class="btn btn-outline btn-small" type="button" id="disconnectGoogleWorkspaceBtn" ${googleWorkspaceConnected ? "" : "disabled"}>Disconnect</button>
+        </div>
         ` : `<p class="help-text">Locked. Unlock APP Developer to access authentication controls.</p>`}
       </article>
 
@@ -284,6 +290,44 @@ export function settingsTemplate(data) {
 
       <article class="card">
         <div class="card-title-row">
+          <h3>Billing (Stripe)</h3>
+        </div>
+        ${isDeveloperUnlocked ? `
+          <form id="billingSettingsForm" class="split-3">
+            <label class="field">
+              <span>Require Active Subscription</span>
+              <select class="select" name="requireActiveSubscription">
+                <option value="true" ${settings.billing?.requireActiveSubscription !== false ? "selected" : ""}>Yes</option>
+                <option value="false" ${settings.billing?.requireActiveSubscription === false ? "selected" : ""}>No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Stripe Publishable Key</span>
+              <input class="input" name="stripePublishableKey" type="text" value="${escapeHtml(settings.billing?.stripePublishableKey || "")}" placeholder="pk_live_...">
+            </label>
+            <label class="field">
+              <span>Stripe Checkout Endpoint</span>
+              <input class="input" name="stripeCheckoutEndpoint" type="url" value="${escapeHtml(settings.billing?.stripeCheckoutEndpoint || "")}" placeholder="https://script.google.com/...">
+            </label>
+            <label class="field">
+              <span>Starter Price ID</span>
+              <input class="input" name="starterPriceId" type="text" value="${escapeHtml(settings.billing?.stripePriceIds?.starter || "")}">
+            </label>
+            <label class="field">
+              <span>Growth Price ID</span>
+              <input class="input" name="growthPriceId" type="text" value="${escapeHtml(settings.billing?.stripePriceIds?.growth || "")}">
+            </label>
+            <label class="field">
+              <span>Pro Price ID</span>
+              <input class="input" name="proPriceId" type="text" value="${escapeHtml(settings.billing?.stripePriceIds?.pro || "")}">
+            </label>
+            <button class="btn btn-primary" type="submit">Save Billing Settings</button>
+          </form>
+        ` : `<p class="help-text">Locked. Unlock APP Developer to configure billing.</p>`}
+      </article>
+
+      <article class="card">
+        <div class="card-title-row">
           <h3>Student Profile Fields</h3>
         </div>
         <form id="customFieldForm" class="split-3">
@@ -307,6 +351,32 @@ export function settingsTemplate(data) {
         <div class="list">
           ${renderMaybe(settings.customStudentFields.length > 0, settings.customStudentFields.map(renderCustomField).join(""), `<div class="empty-state">No custom fields configured.</div>`)}
         </div>
+      </article>
+
+      <article class="card">
+        <div class="card-title-row">
+          <h3>Super Admin Tenant Control</h3>
+          <span class="badge badge-warning">${(settings.tenantRegistry || []).length} tenants</span>
+        </div>
+        ${isDeveloperUnlocked ? `
+          <div class="action-row">
+            <button class="btn btn-outline btn-small" id="refreshTenantRegistryBtn" type="button">Refresh Tenant Registry</button>
+          </div>
+          <div class="list">
+            ${(settings.tenantRegistry || []).map((tenant) => `
+              <div class="list-item">
+                <div class="list-item-main">
+                  <div class="list-item-title">${escapeHtml(tenant.tenantName || tenant.tenantId)}</div>
+                  <div class="list-item-sub">Tenant: ${escapeHtml(tenant.tenantId || "")} | Admin: ${escapeHtml(tenant.adminEmail || "-")} | Plan: ${escapeHtml((tenant.plan || "starter").toUpperCase())}</div>
+                </div>
+                <div class="action-row">
+                  <span class="badge ${tenant.status === "active" ? "badge-success" : "badge-danger"}">${escapeHtml((tenant.status || "active").toUpperCase())}</span>
+                  <button class="btn btn-outline btn-small" data-action="tenant-status" data-tenant-id="${escapeHtml(tenant.tenantId || "")}" data-status="${tenant.status === "active" ? "disabled" : "active"}" type="button">${tenant.status === "active" ? "Disable" : "Activate"}</button>
+                </div>
+              </div>
+            `).join("") || `<div class="empty-state">No tenants registered yet.</div>`}
+          </div>
+        ` : `<p class="help-text">Locked. Unlock APP Developer to manage tenant statuses.</p>`}
       </article>
 
       <article class="card">

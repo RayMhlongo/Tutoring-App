@@ -13,6 +13,7 @@ import { requestBackgroundSync, initSyncEngine, refreshQueueCount, subscribeSync
 import { initTheme, toggleThemeMode } from "./theme.js";
 import { initUI, setConnectionStatusLabel, setSyncStatusLabel, showToast } from "./ui.js";
 import { logError, logInfo, logWarn } from "./logger.js";
+import { getRuntimeEnv } from "./env.js";
 import {
   authenticateGoogleCredential,
   authenticateLocal,
@@ -85,6 +86,41 @@ async function hideSplashAndShowApp() {
   splashScreen.style.display = "none";
 }
 
+async function applyEnvironmentDefaults() {
+  const env = getRuntimeEnv();
+  const settings = await getAppSettings();
+  const patch = {};
+
+  if (!settings.auth?.googleClientId && env.googleClientId) {
+    patch.auth = {
+      ...(settings.auth || {}),
+      googleClientId: env.googleClientId,
+      googleEnabled: true
+    };
+  }
+
+  if (!settings.ai?.apiKey && env.geminiApiKey) {
+    patch.ai = {
+      ...(settings.ai || {}),
+      apiKey: env.geminiApiKey
+    };
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await updateAuthSettings(patch.auth || {});
+    if (patch.ai) {
+      const current = await getAppSettings();
+      await setSetting("appSettings", {
+        ...current,
+        ai: {
+          ...(current.ai || {}),
+          ...patch.ai
+        }
+      });
+    }
+  }
+}
+
 function connectStatusSignals() {
   setConnectionStatusLabel(navigator.onLine);
   window.addEventListener("online", () => setConnectionStatusLabel(true));
@@ -135,7 +171,7 @@ async function ensureAuthenticated() {
     const settings = await getAppSettings();
     authRoot.hidden = false;
     authRoot.innerHTML = authGateTemplate({
-      businessName: settings.businessName || "Data Insights by Ray",
+      businessName: settings.businessName || "EduPulse by Ray",
       auth: state.auth,
       localCredentialsReady: state.localCredentialsReady,
       online: navigator.onLine
@@ -267,6 +303,7 @@ async function bootstrap() {
   setupInstallPrompt();
   await initStorage();
   await migrateLegacyLocalStorage();
+  await applyEnvironmentDefaults();
   await initTheme(themeToggleBtn);
   const initialSettings = await getAppSettings();
   if (initialSettings.appName || initialSettings.businessName) {

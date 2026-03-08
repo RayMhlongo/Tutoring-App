@@ -227,8 +227,10 @@ export function renderActivityLine(activity) {
 export async function buildSuperAdminSnapshot() {
   const settings = await getAppSettings();
   const profiles = Array.isArray(settings.syncProfiles) ? settings.syncProfiles : [];
+  const tenantRegistry = Array.isArray(settings.tenantRegistry) ? settings.tenantRegistry : [];
   const summary = {
-    tenantCount: profiles.length,
+    tenantCount: tenantRegistry.length || profiles.length,
+    activeTenants: tenantRegistry.filter((tenant) => (tenant.status || "active") === "active").length || profiles.length,
     students: 0,
     tutors: 0,
     lessons: 0,

@@ -1,5 +1,5 @@
 export const APP_INFO = {
-  name: "Data Insights by Ray Platform",
+  name: "EduPulse by Ray",
   dbName: "data-insights-ray-db",
   dbVersion: 3,
   tenantId: "dir-default"
@@ -56,9 +56,9 @@ export const DEFAULT_GRADES = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  appVersion: "2.1.0",
-  businessName: "Data Insights by Ray",
-  appName: "Data Insights by Ray Platform",
+  appVersion: "2.2.0",
+  businessName: "EduPulse by Ray",
+  appName: "EduPulse by Ray",
   customStudentFields: [
     { key: "school", label: "School", type: "text" },
     { key: "parentName", label: "Parent Name", type: "text" },
@@ -86,8 +86,31 @@ export const DEFAULT_SETTINGS = {
     growth: { key: "growth", label: "Growth", maxStudents: 300, maxTutors: 15 },
     pro: { key: "pro", label: "Pro", maxStudents: 2000, maxTutors: 100 }
   },
+  billing: {
+    enabled: true,
+    requireActiveSubscription: true,
+    stripePublishableKey: "",
+    stripeCheckoutEndpoint: "",
+    stripePriceIds: {
+      starter: "",
+      growth: "",
+      pro: ""
+    }
+  },
   tenantPlans: {
     "local-profile": "starter"
+  },
+  tenantRegistry: [
+    {
+      tenantId: "dir-default",
+      tenantName: "EduPulse Default Tenant",
+      adminEmail: "honestkai224@gmail.com",
+      status: "active",
+      plan: "starter"
+    }
+  ],
+  onboarding: {
+    completed: false
   },
   superAdmin: {
     enabled: true,
@@ -121,7 +144,7 @@ export const DEFAULT_SETTINGS = {
     googleEnabled: false,
     googleClientId: "",
     googleSheetsEndpoint: "",
-    allowedGoogleEmail: "",
+    allowedGoogleEmail: "honestkai224@gmail.com",
     sessionTtlHours: 336
   },
   developer: {
@@ -131,9 +154,10 @@ export const DEFAULT_SETTINGS = {
   syncProfiles: [
     {
       id: "local-profile",
-      label: "Data Insights Main Tenant",
-      gmail: "",
+      label: "EduPulse Main Tenant",
+      gmail: "honestkai224@gmail.com",
       tenantId: "dir-default",
+      subscriptionStatus: "trial",
       endpoint: "",
       active: true
     }

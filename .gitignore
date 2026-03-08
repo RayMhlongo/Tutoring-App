@@ -1,6 +1,8 @@
 node_modules/
 android/
 www/
+.env
+.env.*
 npm-debug.log*
 xfactor-tutoring.zip
 android-gradle-build-log/

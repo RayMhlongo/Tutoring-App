@@ -18,7 +18,7 @@ export function authGateTemplate(payload) {
         <div class="brand auth-brand">
           <img src="./assets/logo/data-insights-logo.svg" alt="Data Insights by Ray logo" class="brand-logo">
           <div>
-            <h1>${escapeHtml(businessName || "Data Insights by Ray")}</h1>
+            <h1>${escapeHtml(businessName || "EduPulse by Ray")}</h1>
             <p class="subtle-text">Secure Platform Access</p>
           </div>
         </div>

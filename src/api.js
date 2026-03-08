@@ -56,6 +56,14 @@ async function postForm(endpoint, params) {
   throw lastError || new Error("API request failed.");
 }
 
+export async function invokeAppsScript(endpoint, params) {
+  const safeEndpoint = normalizeEndpoint(endpoint);
+  if (!safeEndpoint) {
+    throw new Error("No endpoint configured for this profile.");
+  }
+  return postForm(safeEndpoint, params || {});
+}
+
 export async function pingEndpoint(endpoint) {
   const safeEndpoint = normalizeEndpoint(endpoint);
   if (!safeEndpoint) {
@@ -147,6 +155,84 @@ export async function saveStudentQrToDrive(profile, payload) {
   });
   if (!result?.ok) {
     throw new Error(result?.error || "QR upload to Google Drive failed.");
+  }
+  return result;
+}
+
+export async function onboardTenant(profile, payload) {
+  const endpoint = normalizeEndpoint(profile?.endpoint || "");
+  if (!endpoint) {
+    throw new Error("No endpoint configured for onboarding.");
+  }
+  const result = await postForm(endpoint, {
+    action: "onboardTenant",
+    tenantName: sanitizeText(payload?.tenantName || "", 120),
+    adminEmail: sanitizeText(payload?.adminEmail || "", 180),
+    plan: sanitizeText(payload?.plan || "starter", 20)
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "Tenant onboarding failed.");
+  }
+  const tenant = sanitizeObject(result.tenant || {});
+  return {
+    tenantId: sanitizeText(tenant.tenantId || result.tenantId || "", 120),
+    tenantName: sanitizeText(tenant.tenantName || payload?.tenantName || "", 120),
+    adminEmail: sanitizeText(tenant.adminEmail || payload?.adminEmail || "", 180),
+    plan: sanitizeText(tenant.plan || payload?.plan || "starter", 20),
+    status: sanitizeText(tenant.status || "active", 24),
+    driveFolderId: sanitizeText(tenant.driveFolderId || "", 160),
+    sheetId: sanitizeText(tenant.sheetId || "", 160),
+    endpoint: sanitizeText(result.endpoint || endpoint, 1400)
+  };
+}
+
+export async function createStripeCheckout(profile, payload) {
+  const endpoint = normalizeEndpoint(profile?.endpoint || "");
+  if (!endpoint) {
+    throw new Error("No endpoint configured for Stripe checkout.");
+  }
+  const result = await postForm(endpoint, {
+    action: "createStripeCheckout",
+    tenantId: sanitizeText(payload?.tenantId || profile?.tenantId || "", 120),
+    plan: sanitizeText(payload?.plan || "starter", 20),
+    email: sanitizeText(payload?.email || profile?.gmail || "", 180),
+    priceId: sanitizeText(payload?.priceId || "", 120)
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "Stripe checkout initialization failed.");
+  }
+  return {
+    url: sanitizeText(result.url || "", 3000),
+    sessionId: sanitizeText(result.sessionId || "", 180)
+  };
+}
+
+export async function fetchTenantRegistry(profile) {
+  const endpoint = normalizeEndpoint(profile?.endpoint || "");
+  if (!endpoint) {
+    throw new Error("No endpoint configured for tenant registry.");
+  }
+  const result = await postForm(endpoint, {
+    action: "listTenants"
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "Could not load tenant registry.");
+  }
+  return result.tenants || [];
+}
+
+export async function updateTenantStatus(profile, payload) {
+  const endpoint = normalizeEndpoint(profile?.endpoint || "");
+  if (!endpoint) {
+    throw new Error("No endpoint configured for tenant status updates.");
+  }
+  const result = await postForm(endpoint, {
+    action: "updateTenantStatus",
+    tenantId: sanitizeText(payload?.tenantId || "", 120),
+    status: sanitizeText(payload?.status || "active", 24)
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "Could not update tenant status.");
   }
   return result;
 }

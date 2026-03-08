@@ -1,6 +1,27 @@
 import { TABLES } from "./config.js";
+import { getRuntimeEnv } from "./env.js";
 import { getActiveProfile, getAppSettings, listRecords, saveRecord } from "./storage.js";
 import { sanitizeText, uid } from "./utils.js";
+
+let GoogleGenAIClass = null;
+let geminiClientFactory = null;
+
+export function __setGeminiClientFactoryForTests(factory) {
+  geminiClientFactory = typeof factory === "function" ? factory : null;
+}
+
+async function resolveGoogleGenAI() {
+  if (GoogleGenAIClass) return GoogleGenAIClass;
+  try {
+    const sdk = await import("@google/genai");
+    GoogleGenAIClass = sdk.GoogleGenAI;
+    return GoogleGenAIClass;
+  } catch {
+    const sdk = await import("https://esm.sh/@google/genai");
+    GoogleGenAIClass = sdk.GoogleGenAI;
+    return GoogleGenAIClass;
+  }
+}
 
 function ensurePrompt(prompt) {
   const value = sanitizeText(prompt, 4000);
@@ -16,6 +37,8 @@ function isAiEnabled(settings) {
 }
 
 function extractGeminiText(payload) {
+  const direct = sanitizeText(payload?.text || "", 16000);
+  if (direct) return direct;
   const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
   for (const candidate of candidates) {
     const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
@@ -42,12 +65,21 @@ export async function askGemini({ accountId, userId = "admin", prompt }) {
   if (!isAiEnabled(settings)) {
     throw new Error("AI assistant is disabled. Enable it in Settings > APP Developer.");
   }
-  const apiKey = sanitizeText(ai.apiKey || "", 500);
+  const runtimeEnv = getRuntimeEnv();
+  const apiKey = sanitizeText(ai.apiKey || runtimeEnv.geminiApiKey || "", 500);
   if (!apiKey) {
-    throw new Error("Gemini API key is missing in settings.");
+    throw new Error("Gemini API key is missing. Set VITE_GEMINI_API_KEY or settings.ai.apiKey.");
   }
   if (!navigator.onLine) {
     throw new Error("AI assistant requires an internet connection.");
+  }
+
+  let GoogleGenAI = null;
+  if (!geminiClientFactory) {
+    GoogleGenAI = await resolveGoogleGenAI();
+    if (!GoogleGenAI) {
+      throw new Error("Gemini SDK could not be loaded.");
+    }
   }
 
   const safeModel = sanitizeText(ai.model || "gemini-2.0-flash", 120);
@@ -73,26 +105,17 @@ export async function askGemini({ accountId, userId = "admin", prompt }) {
       parts: [{ text: sanitizeText(item.content || "", 4000) }]
     }));
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(safeModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      system_instruction: {
-        parts: [{ text: `${systemPrompt}\n${contextPrefix}` }]
-      },
-      contents
-    })
+  const client = geminiClientFactory
+    ? geminiClientFactory({ apiKey, model: safeModel })
+    : new GoogleGenAI({ apiKey });
+  const payload = await client.models.generateContent({
+    model: safeModel,
+    contents,
+    config: {
+      systemInstruction: `${systemPrompt}\n${contextPrefix}`
+    }
   });
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Gemini request failed (${response.status}): ${errorText || "Unknown error"}`);
-  }
-
-  const payload = await response.json();
   const answer = extractGeminiText(payload);
   if (!answer) {
     throw new Error("Gemini returned an empty response.");
