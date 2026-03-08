@@ -81,6 +81,7 @@ export async function sendQueuedChange(profile, change) {
   const body = {
     action: "syncChange",
     changeId: sanitizeText(change.changeId, 140),
+    tenantId: sanitizeText(change.tenantId || change.payload?.tenantId || profile?.tenantId || "", 120),
     accountId: sanitizeText(change.accountId, 120),
     table: sanitizeText(change.table, 80),
     op: sanitizeText(change.op, 24),
@@ -101,7 +102,8 @@ export async function fetchRemoteSnapshot(profile) {
   }
   const result = await postForm(endpoint, {
     action: "getAll",
-    accountId: sanitizeText(profile.id, 120)
+    accountId: sanitizeText(profile.id, 120),
+    tenantId: sanitizeText(profile.tenantId || profile.id, 120)
   });
   if (!result?.ok) {
     throw new Error(result?.error || "Failed to pull remote data.");
@@ -117,10 +119,34 @@ export async function exportSnapshotToGoogle(profile, snapshot) {
   const result = await postForm(endpoint, {
     action: "exportSnapshot",
     accountId: sanitizeText(profile.id, 120),
+    tenantId: sanitizeText(profile.tenantId || profile.id, 120),
     payload: JSON.stringify(sanitizeObject(snapshot))
   });
   if (!result?.ok) {
     throw new Error(result?.error || "Snapshot export failed.");
+  }
+  return result;
+}
+
+export async function saveStudentQrToDrive(profile, payload) {
+  const endpoint = normalizeEndpoint(profile?.endpoint || "");
+  if (!endpoint) {
+    throw new Error("No endpoint configured for this profile.");
+  }
+  const tenantId = sanitizeText(payload?.tenantId || profile?.tenantId || profile?.id || "", 120);
+  const studentId = sanitizeText(payload?.studentId || "", 120);
+  const dataUrl = sanitizeText(payload?.dataUrl || "", 600000);
+  if (!tenantId || !studentId || !dataUrl) {
+    throw new Error("tenantId, studentId, and dataUrl are required.");
+  }
+  const result = await postForm(endpoint, {
+    action: "saveQr",
+    tenantId,
+    studentId,
+    dataUrl
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "QR upload to Google Drive failed.");
   }
   return result;
 }

@@ -1,84 +1,49 @@
-# X-Factor Tutoring Management App
+# Data Insights by Ray Platform
 
-Offline-first tutoring business platform, optimized for Android APK distribution and zero monthly platform cost.
+Offline-first, multi-tenant tutoring operations platform that runs as:
+- Web app
+- Progressive Web App (installable)
+- Android APK (Capacitor)
 
-## Core Capabilities
-- Secure authentication gate:
-  - Local admin login (offline capable)
-  - Optional Google login with allowed-email restriction
-  - Cached session for offline reuse
-- Full tutoring workflows:
-  - Students (dynamic profile fields)
-  - Lessons (PDF summaries + parent communication generator)
-  - Attendance (including QR check-in)
-  - Payments + expenses
-  - Reports/exports (CSV, Excel, PDF)
-- Weekly scheduler:
-  - Daily / weekly / monthly views
-  - Configurable schedule fields
-  - Schedule export as PNG or JPEG
-- Dashboard analytics:
-  - Top improving students
-  - Students needing help
-  - Weak subjects
-  - Most studied subjects
-  - Filter support (student, subject, grade, date range)
-- Backup/restore:
-  - Local JSON/CSV backup
-  - Encrypted backup option
-  - Restore prompt on fresh install
-  - Optional Google Drive backup/restore path
-- Sync architecture:
-  - IndexedDB-first writes via Dexie
-  - Sync queue with retries and duplicate-safe `changeId`
-  - Google Apps Script endpoints: `ping`, `syncChange`, `getAll`, `exportSnapshot`
-  - Schedule table added to sync
-- Reliability hardening:
-  - Central runtime logger (`src/logger.js`)
-  - API retry logic for transient backend/network failures
-  - Global crash capture (`error` + `unhandledrejection`)
-  - Shared validation layer (`src/validation.js`) used by student/payment/lesson/schedule writes
-- PWA + APK readiness:
-  - Service worker app-shell/runtime caching
-  - Manifest + icons
-  - Capacitor config
-  - GitHub Actions APK workflow artifact
+## Core Features
+- Secure auth:
+  - Local admin login (offline-capable)
+  - Optional Google login (allowed-email restriction)
+  - Cached sessions for offline reuse
+- Multi-tenant data model:
+  - `tenantId` on all runtime records
+  - Per-account/tenant isolation
+  - SuperAdmin cross-tenant dashboard rollup
+- Tutoring operations:
+  - Tutors
+  - Students (dynamic custom profile fields)
+  - Schedule (daily/weekly/monthly)
+  - QR check-in attendance
+  - Lessons and parent communication
+  - Payments and expenses
+  - Reports and exports (CSV/Excel/PDF)
+- AI Assistant:
+  - Gemini integration
+  - Tenant-scoped conversation history
+- Sync and backup:
+  - IndexedDB-first writes (Dexie)
+  - Sync queue to Google Apps Script + Google Sheets
+  - Google Drive backup/restore support
+- Performance and reliability:
+  - Runtime logger
+  - Input validation
+  - Retry/backoff on sync API calls
+  - Offline service worker with background sync triggers
 
-## Project Structure
+## Project Layout
 ```text
-xfactor-tutoring
+data-insights-by-ray-platform
   /src
-    app.js
-    api.js
-    auth.js
-    analytics.js
-    backup.js
-    config.js
-    storage.js
-    sync.js
-    scheduler.js
-    qr.js
-    students.js
-    lessons.js
-    attendance.js
-    payments.js
-    reports.js
-    ui.js
-    theme.js
-    utils.js
-    view-utils.js
   /components
-    auth.js
-    dashboard.js
-    studentProfile.js
-    lessonEditor.js
-    calendar.js
-    qrScanner.js
-    settings.js
   /styles
   /assets
   /icons
-  /config
+  /docs/ai-handoff
   service-worker.js
   manifest.json
   index.html
@@ -93,73 +58,32 @@ npm install
 npm run serve
 ```
 
-Open the local URL in Chrome/Edge.
-
-## Automated Tests
+## Tests
 ```bash
 npm test
-```
-
-Includes checks for:
-- Student registration save flow (including QR fields)
-- QR value parsing/building
-- Attendance persistence
-- Payment persistence
-- Local authentication flow
-
-## Stress Test
-```bash
 npm run stress:test
 ```
 
-Simulates:
-- 1000 students
-- 10000 attendance records
-- 5000 payment records
-
-and validates data integrity after the run.
-
-## Google Sheets Backend Setup
-1. Open your Google Sheet.
-2. Go to **Extensions -> Apps Script**.
+## Google Backend Setup (Free)
+1. Open Google Sheet.
+2. Extensions -> Apps Script.
 3. Paste `apps-script.gs`.
-4. Deploy as Web App:
-   - Execute as: `Me`
-   - Access: `Anyone`
-5. Copy the deployment URL.
-6. In app settings, add a sync profile with Gmail label + endpoint URL.
+4. Deploy Web App (Execute as Me, Access Anyone).
+5. Copy deployment URL.
+6. In app Settings -> APP Developer -> Google Sync Accounts, save endpoint.
 
-Auto-managed sheet tabs include:
-- `Students`
-- `Lessons`
-- `Attendance`
-- `Payments`
-- `Schedule`
-- `Expenses`
-- `Reports`
-- `SyncLog`
+Supported Apps Script actions:
+- `ping`
+- `syncChange`
+- `getAll`
+- `exportSnapshot`
+- `saveQr`
 
-## Authentication Notes
-- First launch requires local admin setup if no local password exists.
-- Optional Google login requires:
-  - Google OAuth Client ID
-  - Allowed Gmail address configured in settings
-- Offline login works via cached valid session.
+## PWA
+- `manifest.json` includes standalone install metadata.
+- `service-worker.js` caches app shell + runtime assets.
 
-## Android APK Pipeline
-Workflow file: `.github/workflows/android-apk.yml`
-
-It will:
-1. Install Node, Java, Android SDK
-2. Install Capacitor dependencies
-3. Add/sync Android platform
-4. Build debug APK
-5. Upload APK as GitHub Actions artifact
-
-Download path:
-- GitHub -> **Actions** -> select run -> **Artifacts** -> `xfactor-tutoring-debug-apk`
-
-## Capacitor Commands
+## Android (Capacitor)
 ```bash
 npm install @capacitor/core @capacitor/android
 npx cap add android
@@ -167,9 +91,20 @@ npx cap sync android
 npx cap open android
 ```
 
-## Template Repository
-A second reusable scaffold has been created at:
+## GitHub Actions APK
+Workflow: `.github/workflows/android-apk.yml`
 
-`tutoring-business-platform-template/`
+Outputs:
+- APK artifact: `data-insights-debug-apk`
+- Build log artifact: `android-gradle-build-log`
 
-It includes setup wizard + configurable architecture for multi-client white-label tutoring deployments.
+Download path:
+- GitHub -> Actions -> choose run -> Artifacts -> `data-insights-debug-apk`
+
+## Brand Assets
+- Logo: `assets/logo/data-insights-logo.svg`
+- App icons: `icons/*`
+
+## AI Handoff
+Architecture and implementation summary for other AI tools:
+- `docs/ai-handoff/README.md`

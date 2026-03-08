@@ -1,4 +1,4 @@
-import { APP_INFO, DEFAULT_SETTINGS, SYNC, TABLES } from "./config.js";
+import { APP_INFO, DEFAULT_SETTINGS, SNAPSHOT_TABLES, SYNC, TABLES } from "./config.js";
 import { isoNow, sanitizeEmail, sanitizeObject, sanitizeText, uid } from "./utils.js";
 
 const DexieRef = window.Dexie;
@@ -22,11 +22,17 @@ db.version(1).stores({
 
 db.version(APP_INFO.dbVersion).stores({
   [TABLES.students]: "id, accountId, surname, firstName, grade, updatedAt, deleted",
+  [TABLES.tutors]: "id, accountId, surname, firstName, updatedAt, deleted",
   [TABLES.lessons]: "id, accountId, studentId, date, subject, updatedAt, deleted",
+  [TABLES.assignments]: "id, accountId, studentId, tutorId, dueDate, updatedAt, deleted",
   [TABLES.attendance]: "id, accountId, studentId, lessonId, dateTime, updatedAt, deleted",
   [TABLES.payments]: "id, accountId, studentId, date, status, updatedAt, deleted",
   [TABLES.expenses]: "id, accountId, date, category, updatedAt, deleted",
   [TABLES.schedule]: "id, accountId, date, timeStart, studentId, subject, updatedAt, deleted",
+  [TABLES.messages]: "id, accountId, userId, channel, createdAt, updatedAt, deleted",
+  [TABLES.notifications]: "id, accountId, type, status, createdAt, updatedAt, deleted",
+  [TABLES.performanceMetrics]: "id, accountId, metricType, date, updatedAt, deleted",
+  [TABLES.businessMetrics]: "id, accountId, metricType, date, updatedAt, deleted",
   [TABLES.reports]: "id, accountId, type, createdAt, updatedAt, deleted",
   [TABLES.syncQueue]: "++queueId, changeId, accountId, table, recordId, status, attempts, nextRetryAt, createdAt, [accountId+table+recordId], [status+nextRetryAt]",
   [TABLES.settings]: "key, updatedAt"
@@ -44,6 +50,11 @@ function mergeSettings(base, incoming) {
     out[key] = mergeSettings(base[key], incoming[key]);
   });
   return out;
+}
+
+function normalizeTenantId(input, fallback = APP_INFO.tenantId) {
+  const raw = sanitizeText(input || fallback, 80).toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  return raw || sanitizeText(fallback, 80).toLowerCase() || "tenant-default";
 }
 
 export async function initStorage() {
@@ -159,10 +170,14 @@ export async function setActiveProfile(profileId) {
 
 export async function saveSyncProfile(profileInput) {
   const settings = await getAppSettings();
+  const tenantId = normalizeTenantId(profileInput.tenantId || profileInput.id || profileInput.label || "tenant");
+  const incomingId = profileInput.id || uid("acct");
   const profile = {
-    id: profileInput.id || uid("acct"),
+    id: incomingId,
     label: sanitizeText(profileInput.label || profileInput.gmail || "Profile", 60),
     gmail: sanitizeEmail(profileInput.gmail || ""),
+    tenantId,
+    plan: sanitizeText(profileInput.plan || settings.tenantPlans?.[profileInput.id || ""] || "starter", 20).toLowerCase() || "starter",
     endpoint: sanitizeText(profileInput.endpoint || "", 1000),
     active: Boolean(profileInput.active)
   };
@@ -178,6 +193,10 @@ export async function saveSyncProfile(profileInput) {
     settings.activeProfileId = profile.id;
     settings.syncProfiles = settings.syncProfiles.map((entry) => ({ ...entry, active: entry.id === profile.id }));
   }
+  settings.tenantPlans = {
+    ...(settings.tenantPlans || {}),
+    [profile.id]: profile.plan
+  };
 
   await setSetting("appSettings", settings);
   return settings;
@@ -189,6 +208,9 @@ export async function removeSyncProfile(profileId) {
     throw new Error("The default local profile cannot be removed.");
   }
   settings.syncProfiles = settings.syncProfiles.filter((profile) => profile.id !== profileId);
+  if (settings.tenantPlans && typeof settings.tenantPlans === "object") {
+    delete settings.tenantPlans[profileId];
+  }
   if (!settings.syncProfiles.length) {
     settings.syncProfiles = [...DEFAULT_SETTINGS.syncProfiles];
     settings.activeProfileId = DEFAULT_SETTINGS.activeProfileId;
@@ -202,7 +224,20 @@ export async function removeSyncProfile(profileId) {
 
 export async function getActiveProfile() {
   const settings = await getAppSettings();
-  return settings.syncProfiles.find((profile) => profile.id === settings.activeProfileId) || settings.syncProfiles[0];
+  const active = settings.syncProfiles.find((profile) => profile.id === settings.activeProfileId) || settings.syncProfiles[0];
+  if (!active) {
+    return {
+      id: "local-profile",
+      label: "Local",
+      tenantId: APP_INFO.tenantId,
+      endpoint: "",
+      active: true
+    };
+  }
+  return {
+    ...active,
+    tenantId: normalizeTenantId(active.tenantId || active.id || APP_INFO.tenantId)
+  };
 }
 
 export function getAccountIdFromProfile(profile) {
@@ -213,10 +248,11 @@ function normalizeRecord(table, record, accountId) {
   const now = isoNow();
   const sanitized = sanitizeObject(record) || {};
   const hasId = sanitizeText(sanitized.id || "").length > 0;
+  const tenantId = normalizeTenantId(sanitized.tenantId || accountId || APP_INFO.tenantId);
   return {
     ...sanitized,
     id: hasId ? sanitizeText(sanitized.id, 120) : uid(table.slice(0, 3)),
-    tenantId: APP_INFO.tenantId,
+    tenantId,
     accountId: sanitizeText(sanitized.accountId || accountId, 120),
     createdAt: sanitized.createdAt || now,
     updatedAt: now,
@@ -227,13 +263,16 @@ function normalizeRecord(table, record, accountId) {
 export async function saveRecord(table, record, options = {}) {
   const settings = await getAppSettings();
   const accountId = options.accountId || settings.activeProfileId;
+  const activeProfile = settings.syncProfiles.find((profile) => profile.id === accountId);
+  const tenantId = normalizeTenantId(options.tenantId || record?.tenantId || activeProfile?.tenantId || accountId || APP_INFO.tenantId);
   const op = options.op || "upsert";
   const queue = options.queue !== false;
-  const data = normalizeRecord(table, record, accountId);
+  const data = normalizeRecord(table, { ...(record || {}), tenantId }, accountId);
 
   await db[table].put(data);
   if (queue) {
     await enqueueSyncChange({
+      tenantId: data.tenantId,
       accountId: data.accountId,
       table,
       op,
@@ -268,15 +307,7 @@ export async function listRecords(table, accountId, options = {}) {
 }
 
 export async function replaceAccountDataset(accountId, snapshot = {}) {
-  const tables = [
-    TABLES.students,
-    TABLES.lessons,
-    TABLES.attendance,
-    TABLES.payments,
-    TABLES.expenses,
-    TABLES.schedule,
-    TABLES.reports
-  ];
+  const tables = [...SNAPSHOT_TABLES];
   await db.transaction("rw", ...tables.map((table) => db[table]), async () => {
     for (const table of tables) {
       const current = await db[table].where("accountId").equals(accountId).toArray();
@@ -290,15 +321,7 @@ export async function replaceAccountDataset(accountId, snapshot = {}) {
 }
 
 export async function loadAccountSnapshot(accountId) {
-  const tables = [
-    TABLES.students,
-    TABLES.lessons,
-    TABLES.attendance,
-    TABLES.payments,
-    TABLES.expenses,
-    TABLES.schedule,
-    TABLES.reports
-  ];
+  const tables = [...SNAPSHOT_TABLES];
   const snapshot = {};
   for (const table of tables) {
     snapshot[table] = await listRecords(table, accountId);
@@ -311,6 +334,7 @@ export async function enqueueSyncChange(change) {
   const queueEntry = {
     queueId: change.queueId,
     changeId: change.changeId || uid("chg"),
+    tenantId: normalizeTenantId(change.tenantId || change.accountId || APP_INFO.tenantId),
     accountId: sanitizeText(change.accountId, 120),
     table: sanitizeText(change.table, 80),
     recordId: sanitizeText(change.recordId, 120),

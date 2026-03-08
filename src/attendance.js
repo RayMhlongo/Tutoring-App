@@ -17,7 +17,11 @@ export async function logAttendance(payload, accountId) {
     checkInMethod: sanitizeText(payload.checkInMethod || "qr", 40),
     notes: sanitizeText(payload.notes || "", 1200)
   };
-  return saveRecord(TABLES.attendance, record, { accountId, queue: true, op: "upsert" });
+  return saveRecord(TABLES.attendance, record, {
+    accountId,
+    queue: payload.skipQueue !== true,
+    op: "upsert"
+  });
 }
 
 export async function listAttendance(accountId) {

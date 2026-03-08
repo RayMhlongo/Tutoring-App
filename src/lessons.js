@@ -16,6 +16,8 @@ export async function createLesson(payload, accountId) {
   const record = {
     id: payload.id || uid("les"),
     studentId,
+    tutorId: sanitizeText(payload.tutorId || "", 120),
+    tutorName: sanitizeText(payload.tutorName || "", 160),
     date,
     subject,
     category: sanitizeText(payload.category || "", 80),
@@ -65,7 +67,7 @@ export function downloadLessonPdf(lesson, studentName) {
   }
   const doc = new jsPdfNS.jsPDF();
   const lines = [
-    `X-Factor Tutoring Lesson Summary`,
+    `Data Insights by Ray Lesson Summary`,
     `Student: ${studentName}`,
     `Date: ${lesson.date || "-"}`,
     `Subject: ${lesson.subject || "-"}`,

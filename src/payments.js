@@ -24,7 +24,11 @@ export async function createPayment(payload, accountId) {
     notes: sanitizeText(payload.notes, 2000),
     status: balance <= 0 ? "paid" : "outstanding"
   };
-  return saveRecord(TABLES.payments, record, { accountId, queue: true, op: "upsert" });
+  return saveRecord(TABLES.payments, record, {
+    accountId,
+    queue: payload.skipQueue !== true,
+    op: "upsert"
+  });
 }
 
 export async function listPayments(accountId) {

@@ -16,10 +16,10 @@ export function authGateTemplate(payload) {
     <section class="auth-gate">
       <article class="auth-card">
         <div class="brand auth-brand">
-          <img src="./assets/logo/xfactor-logo.svg" alt="X-Factor logo" class="brand-logo">
+          <img src="./assets/logo/data-insights-logo.svg" alt="Data Insights by Ray logo" class="brand-logo">
           <div>
-            <h1>${escapeHtml(businessName || "X-Factor Tutoring")}</h1>
-            <p class="subtle-text">Secure Tutor Access</p>
+            <h1>${escapeHtml(businessName || "Data Insights by Ray")}</h1>
+            <p class="subtle-text">Secure Platform Access</p>
           </div>
         </div>
 

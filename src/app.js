@@ -10,7 +10,7 @@ import {
 } from "./storage.js";
 import { restoreFromLocalFile } from "./backup.js";
 import { requestBackgroundSync, initSyncEngine, refreshQueueCount, subscribeSyncState, syncNow } from "./sync.js";
-import { initTheme } from "./theme.js";
+import { initTheme, toggleThemeMode } from "./theme.js";
 import { initUI, setConnectionStatusLabel, setSyncStatusLabel, showToast } from "./ui.js";
 import { logError, logInfo, logWarn } from "./logger.js";
 import {
@@ -26,6 +26,7 @@ const splashScreen = document.getElementById("splashScreen");
 const appShell = document.getElementById("appShell");
 const authRoot = document.getElementById("authRoot");
 const installBtn = document.getElementById("installBtn");
+const themeToggleBtn = document.getElementById("themeToggleBtn");
 let deferredInstallPrompt = null;
 
 function registerGlobalErrorHandlers() {
@@ -134,7 +135,7 @@ async function ensureAuthenticated() {
     const settings = await getAppSettings();
     authRoot.hidden = false;
     authRoot.innerHTML = authGateTemplate({
-      businessName: settings.businessName || "X-Factor Tutoring",
+      businessName: settings.businessName || "Data Insights by Ray",
       auth: state.auth,
       localCredentialsReady: state.localCredentialsReady,
       online: navigator.onLine
@@ -266,7 +267,18 @@ async function bootstrap() {
   setupInstallPrompt();
   await initStorage();
   await migrateLegacyLocalStorage();
-  await initTheme();
+  await initTheme(themeToggleBtn);
+  const initialSettings = await getAppSettings();
+  if (initialSettings.appName || initialSettings.businessName) {
+    document.title = initialSettings.appName || initialSettings.businessName;
+    const brandTitle = document.getElementById("brandTitle");
+    if (brandTitle) {
+      brandTitle.textContent = initialSettings.businessName;
+    }
+  }
+  themeToggleBtn?.addEventListener("click", async () => {
+    await toggleThemeMode(themeToggleBtn);
+  });
   await hideSplashAndShowApp();
   await ensureAuthenticated();
   await maybePromptRestoreFlow();

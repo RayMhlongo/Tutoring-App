@@ -57,7 +57,7 @@ textarea {
 
 .auth-card {
   width: min(460px, 100%);
-  background: #fff;
+  background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -103,7 +103,7 @@ textarea {
   width: 2.8rem;
   height: 2.8rem;
   border-radius: 999px;
-  background: #fff;
+  background: var(--color-card);
   padding: 0.24rem;
 }
 
@@ -132,7 +132,7 @@ textarea {
   gap: var(--space-2);
   flex-wrap: wrap;
   padding: var(--space-2) 1rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--color-card);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -146,7 +146,7 @@ textarea {
   font-size: 0.84rem;
   background: var(--color-secondary-100);
   color: var(--color-primary);
-  border: 1px solid rgba(14, 58, 103, 0.12);
+  border: 1px solid var(--color-border);
 }
 
 .status-pill-warning {
@@ -170,7 +170,7 @@ textarea {
   padding: 0.45rem 0.55rem;
   overflow-x: auto;
   border-bottom: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-card);
   scrollbar-width: thin;
 }
 
@@ -187,9 +187,9 @@ textarea {
 }
 
 .nav-btn.is-active {
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-primary);
-  border-color: rgba(14, 58, 103, 0.14);
+  border-color: var(--color-border);
   box-shadow: var(--shadow-soft);
 }
 
@@ -243,8 +243,16 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.chart-box {
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 8px;
+}
+
 .metric {
-  background: linear-gradient(180deg, #f7fbff, #fff);
+  background: linear-gradient(180deg, var(--color-bg), var(--color-card));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 0.8rem;
@@ -271,7 +279,7 @@ textarea {
 .list-item {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--color-card);
   padding: 0.72rem;
   display: flex;
   justify-content: space-between;
@@ -357,9 +365,9 @@ textarea {
 }
 
 .btn-outline {
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-primary);
-  border: 1px solid rgba(14, 58, 103, 0.35);
+  border: 1px solid var(--color-border);
 }
 
 .btn-small {
@@ -393,7 +401,7 @@ textarea {
   border-radius: var(--radius-sm);
   min-height: 2.65rem;
   padding: 0.55rem 0.7rem;
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
 }
 
@@ -473,7 +481,7 @@ th {
   width: min(560px, 100%);
   max-height: min(92dvh, 92vh);
   overflow: auto;
-  background: #fff;
+  background: var(--color-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-card);
@@ -503,7 +511,7 @@ th {
 .splash-screen {
   position: fixed;
   inset: 0;
-  background: linear-gradient(160deg, #0c3156, #1d5a95 48%, #7eb9e0);
+  background: linear-gradient(160deg, #021233, #063c7e 50%, #0d6ec4);
   display: grid;
   place-items: center;
   align-content: center;
@@ -549,7 +557,7 @@ th {
 }
 
 .qr-canvas-wrap {
-  background: #fff;
+  background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.8rem;
@@ -558,7 +566,7 @@ th {
 .scanner-region {
   width: 100%;
   min-height: 260px;
-  background: #0f2f52;
+  background: var(--color-primary-700);
   border-radius: var(--radius-md);
   overflow: hidden;
 }

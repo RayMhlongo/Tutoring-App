@@ -1,18 +1,24 @@
-// X-Factor Tutoring - Google Apps Script Sync API
+// Data Insights by Ray - Google Apps Script Sync API
 // Deploy as Web App: Execute as "Me", Who has access: "Anyone"
 
 var TABLE_SHEETS = {
   students: "Students",
+  tutors: "Tutors",
   lessons: "Lessons",
+  assignments: "Assignments",
   attendance: "Attendance",
   payments: "Payments",
   schedule: "Schedule",
   expenses: "Expenses",
+  messages: "Messages",
+  notifications: "Notifications",
+  performanceMetrics: "PerformanceMetrics",
+  businessMetrics: "BusinessMetrics",
   reports: "Reports"
 };
 
-var ROW_HEADERS = ["id", "accountId", "createdAt", "updatedAt", "deleted", "payload"];
-var SYNC_HEADERS = ["changeId", "accountId", "table", "recordId", "timestamp", "status"];
+var ROW_HEADERS = ["id", "tenantId", "accountId", "createdAt", "updatedAt", "deleted", "payload"];
+var SYNC_HEADERS = ["changeId", "tenantId", "accountId", "table", "recordId", "timestamp", "status"];
 
 function doGet(e) { return handleRequest(e); }
 function doPost(e) { return handleRequest(e); }
@@ -28,6 +34,7 @@ function handleRequest(e) {
 
     if (action === "syncChange") {
       var changeId = text(e.parameter.changeId);
+      var tenantId = text(e.parameter.tenantId);
       var accountId = text(e.parameter.accountId);
       var table = text(e.parameter.table);
       var recordId = text(e.parameter.recordId);
@@ -35,6 +42,7 @@ function handleRequest(e) {
       var payloadObj = parseJSON(e.parameter.payload, {});
       return json(handleSyncChange(ss, {
         changeId: changeId,
+        tenantId: tenantId,
         accountId: accountId,
         table: table,
         recordId: recordId,
@@ -44,15 +52,27 @@ function handleRequest(e) {
     }
 
     if (action === "getAll") {
-      var snapshot = buildSnapshot(ss, text(e.parameter.accountId));
+      var snapshot = buildSnapshot(ss, text(e.parameter.accountId), text(e.parameter.tenantId));
       return json({ ok: true, data: snapshot });
     }
 
     if (action === "exportSnapshot") {
       var targetAccountId = text(e.parameter.accountId);
+      var targetTenantId = text(e.parameter.tenantId);
       var payload = parseJSON(e.parameter.payload, {});
-      exportSnapshot(ss, targetAccountId, payload);
+      exportSnapshot(ss, targetAccountId, targetTenantId, payload);
       return json({ ok: true, exportedAt: new Date().toISOString() });
+    }
+
+    if (action === "saveQr") {
+      var qrTenant = text(e.parameter.tenantId);
+      var qrStudentId = text(e.parameter.studentId);
+      var qrData = text(e.parameter.dataUrl);
+      if (!qrTenant || !qrStudentId || !qrData) {
+        return json({ ok: false, error: "Missing tenantId, studentId or dataUrl." });
+      }
+      var file = saveQrToDrive(qrTenant, qrStudentId, qrData);
+      return json({ ok: true, fileId: file.getId(), fileName: file.getName() });
     }
 
     return json({ ok: false, error: "Unknown action." });
@@ -65,6 +85,7 @@ function handleSyncChange(ss, change) {
   if (!change.changeId || !change.accountId || !change.table || !change.recordId) {
     return { ok: false, error: "Invalid sync payload." };
   }
+  change.tenantId = change.tenantId || text(change.payload && change.payload.tenantId) || change.accountId;
 
   var syncSheet = ensureSheet(ss, "SyncLog", SYNC_HEADERS);
   var syncRows = syncSheet.getDataRange().getValues();
@@ -74,9 +95,10 @@ function handleSyncChange(ss, change) {
     }
   }
 
-  upsertRecord(ss, change.table, change.accountId, change.recordId, change.payload, change.op);
+  upsertRecord(ss, change.table, change.tenantId, change.accountId, change.recordId, change.payload, change.op);
   syncSheet.appendRow([
     change.changeId,
+    change.tenantId,
     change.accountId,
     change.table,
     change.recordId,
@@ -86,7 +108,7 @@ function handleSyncChange(ss, change) {
   return { ok: true };
 }
 
-function upsertRecord(ss, table, accountId, recordId, payloadObj, op) {
+function upsertRecord(ss, table, tenantId, accountId, recordId, payloadObj, op) {
   var sheetName = TABLE_SHEETS[table];
   if (!sheetName) {
     throw new Error("Unsupported table: " + table);
@@ -95,6 +117,7 @@ function upsertRecord(ss, table, accountId, recordId, payloadObj, op) {
   var rows = sheet.getDataRange().getValues();
   var rowValues = [
     recordId,
+    tenantId || accountId,
     accountId,
     text(payloadObj.createdAt),
     text(payloadObj.updatedAt) || new Date().toISOString(),
@@ -104,7 +127,11 @@ function upsertRecord(ss, table, accountId, recordId, payloadObj, op) {
 
   var foundRow = -1;
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === String(recordId) && String(rows[i][1]) === String(accountId)) {
+    if (
+      String(rows[i][0]) === String(recordId) &&
+      String(rows[i][1]) === String(tenantId || accountId) &&
+      String(rows[i][2]) === String(accountId)
+    ) {
       foundRow = i + 1;
       break;
     }
@@ -116,7 +143,7 @@ function upsertRecord(ss, table, accountId, recordId, payloadObj, op) {
   }
 }
 
-function buildSnapshot(ss, accountId) {
+function buildSnapshot(ss, accountId, tenantId) {
   var output = {};
   var tableNames = Object.keys(TABLE_SHEETS);
   for (var i = 0; i < tableNames.length; i++) {
@@ -125,11 +152,13 @@ function buildSnapshot(ss, accountId) {
     var rows = sheet.getDataRange().getValues();
     var parsed = [];
     for (var r = 1; r < rows.length; r++) {
-      var rowAccount = text(rows[r][1]);
+      var rowTenant = text(rows[r][1]);
+      var rowAccount = text(rows[r][2]);
       if (accountId && rowAccount !== accountId) continue;
-      var deletedFlag = String(rows[r][4]).toLowerCase() === "true";
+      if (tenantId && rowTenant !== tenantId) continue;
+      var deletedFlag = String(rows[r][5]).toLowerCase() === "true";
       if (deletedFlag) continue;
-      var payloadObj = parseJSON(rows[r][5], {});
+      var payloadObj = parseJSON(rows[r][6], {});
       parsed.push(payloadObj);
     }
     output[table] = parsed;
@@ -137,12 +166,12 @@ function buildSnapshot(ss, accountId) {
   return output;
 }
 
-function exportSnapshot(ss, accountId, snapshot) {
+function exportSnapshot(ss, accountId, tenantId, snapshot) {
   var tableNames = Object.keys(TABLE_SHEETS);
   for (var i = 0; i < tableNames.length; i++) {
     var table = tableNames[i];
     var sheet = ensureSheet(ss, TABLE_SHEETS[table], ROW_HEADERS);
-    clearAccountRows(sheet, accountId);
+    clearTenantAccountRows(sheet, accountId, tenantId);
 
     var rows = snapshot[table];
     if (!rows || !rows.length) continue;
@@ -150,6 +179,7 @@ function exportSnapshot(ss, accountId, snapshot) {
       var record = rows[r];
       sheet.appendRow([
         text(record.id),
+        text(record.tenantId || tenantId || accountId),
         accountId,
         text(record.createdAt),
         text(record.updatedAt) || new Date().toISOString(),
@@ -160,12 +190,14 @@ function exportSnapshot(ss, accountId, snapshot) {
   }
 }
 
-function clearAccountRows(sheet, accountId) {
+function clearTenantAccountRows(sheet, accountId, tenantId) {
   if (!accountId) return;
   var rows = sheet.getDataRange().getValues();
   var keep = [ROW_HEADERS];
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]) !== String(accountId)) {
+    var rowTenant = String(rows[i][1]);
+    var rowAccount = String(rows[i][2]);
+    if (rowAccount !== String(accountId) || (tenantId && rowTenant !== String(tenantId))) {
       keep.push(rows[i]);
     }
   }
@@ -184,6 +216,28 @@ function ensureSheet(ss, sheetName, headers) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
   return sheet;
+}
+
+function ensureFolder(parent, name) {
+  var found = parent.getFoldersByName(name);
+  if (found.hasNext()) return found.next();
+  return parent.createFolder(name);
+}
+
+function saveQrToDrive(tenantId, studentId, dataUrl) {
+  var parts = String(dataUrl).split(",");
+  if (parts.length < 2) {
+    throw new Error("Invalid QR data URL.");
+  }
+  var mimeMatch = parts[0].match(/data:(.*?);base64/);
+  var mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+  var bytes = Utilities.base64Decode(parts[1]);
+  var blob = Utilities.newBlob(bytes, mimeType, tenantId + "-" + studentId + "-qr.png");
+  var root = ensureFolder(DriveApp.getRootFolder(), "DataInsightsByRay");
+  var tenantsFolder = ensureFolder(root, "Tenants");
+  var tenantFolder = ensureFolder(tenantsFolder, tenantId);
+  var qrFolder = ensureFolder(tenantFolder, "QRcodes");
+  return qrFolder.createFile(blob);
 }
 
 function parseJSON(raw, fallback) {

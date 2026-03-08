@@ -3,38 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="theme-color" content="#0e3a67">
+  <meta name="theme-color" content="#031a45">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="X-Factor Tutoring">
+  <meta name="apple-mobile-web-app-title" content="Data Insights by Ray">
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
-  <link rel="icon" type="image/svg+xml" href="./assets/logo/xfactor-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="./assets/logo/data-insights-logo.svg">
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192x192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles/theme.css">
   <link rel="stylesheet" href="./styles/main.css">
-  <title>X-Factor Tutoring Manager</title>
+  <title>Data Insights by Ray</title>
 </head>
 <body>
   <div id="splashScreen" class="splash-screen is-visible" aria-hidden="true">
-    <img src="./assets/logo/xfactor-logo.svg" alt="X-Factor Tutoring logo" class="splash-logo">
-    <p class="splash-tagline">Learning with confidence</p>
+    <img src="./assets/logo/data-insights-logo.svg" alt="Data Insights by Ray logo" class="splash-logo">
+    <p class="splash-tagline">Insight-driven tutoring operations</p>
   </div>
 
   <div id="appShell" class="app-shell" hidden>
     <header class="app-header">
       <div class="brand">
-        <img src="./assets/logo/xfactor-logo.svg" alt="X-Factor logo" class="brand-logo">
+        <img src="./assets/logo/data-insights-logo.svg" alt="Data Insights by Ray logo" class="brand-logo">
         <div>
-          <h1>X-Factor Tutoring</h1>
+          <h1 id="brandTitle">Data Insights by Ray</h1>
           <p id="activeAccountLabel" class="subtle-text">Local profile</p>
         </div>
       </div>
       <div class="header-actions">
+        <button id="themeToggleBtn" class="btn btn-outline btn-small" type="button">Dark</button>
         <button id="syncNowBtn" class="btn btn-outline btn-small" type="button">Sync</button>
         <button id="logoutBtn" class="btn btn-outline btn-small" type="button">Logout</button>
         <button id="installBtn" class="btn btn-accent btn-small" type="button" hidden>Install</button>
@@ -48,12 +49,14 @@
 
     <nav class="app-nav" aria-label="Primary">
       <button class="nav-btn is-active" data-view="dashboard" type="button">Dashboard</button>
+      <button class="nav-btn" data-view="tutors" type="button">Tutors</button>
       <button class="nav-btn" data-view="students" type="button">Students</button>
       <button class="nav-btn" data-view="schedule" type="button">Schedule</button>
       <button class="nav-btn" data-view="lessons" type="button">Lessons</button>
       <button class="nav-btn" data-view="payments" type="button">Payments</button>
       <button class="nav-btn" data-view="expenses" type="button">Expenses</button>
       <button class="nav-btn" data-view="reports" type="button">Reports</button>
+      <button class="nav-btn" data-view="ai" type="button">AI Assistant</button>
       <button class="nav-btn" data-view="settings" type="button">Settings</button>
     </nav>
 
@@ -66,11 +69,12 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/dexie@4.0.8/dist/dexie.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
+  <script src="./assets/vendor/qrcode.min.js"></script>
+  <script src="./assets/vendor/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script type="module" src="./src/app.js"></script>
 </body>
 </html>

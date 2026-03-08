@@ -1,6 +1,6 @@
 import { isoNow, sanitizeObject, sanitizeText, uid } from "./utils.js";
 
-const STORAGE_KEY = "xfactorRuntimeLogs";
+const STORAGE_KEY = "dataInsightsRuntimeLogs";
 const MAX_LOGS = 300;
 
 function safeReadLogs() {

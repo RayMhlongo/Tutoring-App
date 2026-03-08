@@ -1,0 +1,37 @@
+<svg width="960" height="280" viewBox="0 0 960 280" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Data Insights by Ray logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#03133C"/>
+      <stop offset="60%" stop-color="#05295F"/>
+      <stop offset="100%" stop-color="#03133C"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5CF8E9"/>
+      <stop offset="100%" stop-color="#0F76FF"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3CEFFF"/>
+      <stop offset="100%" stop-color="#68FFFF"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="280" rx="28" fill="url(#bg)"/>
+
+  <g filter="url(#glow)">
+    <rect x="80" y="145" width="54" height="70" rx="6" fill="url(#bar)"/>
+    <rect x="150" y="98" width="54" height="117" rx="6" fill="url(#bar)"/>
+    <rect x="220" y="52" width="54" height="163" rx="6" fill="url(#bar)"/>
+    <path d="M70 218H287" stroke="url(#line)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <text x="320" y="108" fill="#FFFFFF" font-family="Nunito, Arial, sans-serif" font-size="68" font-weight="700">Data</text>
+  <text x="320" y="176" fill="#8DEBFF" font-family="Nunito, Arial, sans-serif" font-size="68" font-weight="700">Insights</text>
+  <text x="320" y="244" fill="#FFFFFF" font-family="Nunito, Arial, sans-serif" font-size="68" font-weight="700">by Ray</text>
+</svg>

@@ -1,13 +1,16 @@
-import { pingEndpoint, fetchRemoteSnapshot, exportSnapshotToGoogle } from "./api.js";
+import { pingEndpoint, fetchRemoteSnapshot, exportSnapshotToGoogle, saveStudentQrToDrive } from "./api.js";
+import { askGemini, listAiMessages } from "./ai.js";
 import { getSession, logout as clearAuthSession, setLocalAdminCredentials, updateAuthSettings } from "./auth.js";
 import { logAttendance } from "./attendance.js";
 import { backupToGoogleDrive, exportBackupCsv, exportBackupJson, restoreFromLocalFile, restoreLatestFromGoogleDrive } from "./backup.js";
 import { createLesson, downloadLessonPdf, listLessons } from "./lessons.js";
 import { createExpense, createPayment, getOutstandingPayments, listExpenses, listPayments } from "./payments.js";
 import { buildAnalytics } from "./analytics.js";
+import { renderDashboardCharts } from "./charts.js";
 import {
   buildDashboardSnapshot,
   buildFinanceReportRows,
+  buildSuperAdminSnapshot,
   buildStudentProgressReport,
   downloadStudentReportPdf,
   exportAccountDataAsCsv,
@@ -17,6 +20,7 @@ import {
   getActiveProfile,
   getAccountIdFromProfile,
   getAppSettings,
+  listRecords,
   loadAccountSnapshot,
   patchAppSettings,
   removeSyncProfile,
@@ -24,16 +28,20 @@ import {
   saveSyncProfile,
   setActiveProfile
 } from "./storage.js";
-import { createStudent, getStudentById, getStudentProfile, listStudents } from "./students.js";
+import { createStudent, getStudentById, getStudentProfile, listStudents, updateStudent } from "./students.js";
+import { createTutor, listTutors } from "./tutors.js";
 import {
   StudentQrScanner,
   downloadCanvasPng,
   generateQrToCanvas,
+  parseStudentQrPayload,
   parseStudentIdFromQr,
   printCanvas
 } from "./qr.js";
 import { createScheduleEntry, exportScheduleAsImage, getScheduleForStudentDate, getScheduleRange, getWeekRange, listScheduleEntries } from "./scheduler.js";
 import { getSyncStateSnapshot, refreshQueueCount, syncNow } from "./sync.js";
+import { applyThemeMode } from "./theme.js";
+import { TABLES } from "./config.js";
 import {
   debounce,
   escapeHtml,
@@ -404,11 +412,14 @@ async function renderDashboard() {
     state.dashboardFilters = { ...(settings.dashboardFilters || {}) };
   }
   const { dashboardViewTemplate } = await import("../components/dashboard.js");
-  const [snapshot, students, lessons, scheduleEntries] = await Promise.all([
+  const [snapshot, students, lessons, scheduleEntries, attendanceRows, paymentRows, tutorRows] = await Promise.all([
     buildDashboardSnapshot(accountId, state.dashboardFilters),
     listStudents(accountId),
     listLessons(accountId),
-    listScheduleEntries(accountId, state.dashboardFilters)
+    listScheduleEntries(accountId, state.dashboardFilters),
+    listRecords(TABLES.attendance, accountId),
+    listRecords(TABLES.payments, accountId),
+    listRecords(TABLES.tutors, accountId)
   ]);
 
   const gradeFilter = state.dashboardFilters.grade || "";
@@ -423,10 +434,19 @@ async function renderDashboard() {
     schedule: filteredSchedule,
     filters: state.dashboardFilters
   });
+  const profilePlanKey = sanitizeText(
+    settings.tenantPlans?.[accountId]
+    || settings.syncProfiles?.find((entry) => entry.id === accountId)?.plan
+    || "starter",
+    24
+  ).toLowerCase();
+  const plan = settings.planCatalog?.[profilePlanKey] || null;
 
   setHTML(refs.main, dashboardViewTemplate({
     ...snapshot,
     analytics,
+    plan,
+    superAdmin: settings.superAdmin?.enabled ? await buildSuperAdminSnapshot() : null,
     filters: state.dashboardFilters,
     filterOptions: {
       students: students.map((student) => ({ id: student.id, name: `${student.firstName} ${student.surname}` })),
@@ -434,6 +454,49 @@ async function renderDashboard() {
       grades: settings.grades || []
     }
   }));
+  const attendanceCounts = {};
+  const today = new Date();
+  for (let i = 13; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const key = date.toISOString().slice(0, 10);
+    attendanceCounts[key] = 0;
+  }
+  attendanceRows
+    .filter((row) => studentIds.has(row.studentId))
+    .forEach((row) => {
+      const key = sanitizeText(row.date || row.dateTime?.slice(0, 10) || "", 20);
+      if (key && Object.prototype.hasOwnProperty.call(attendanceCounts, key)) {
+        attendanceCounts[key] += 1;
+      }
+    });
+  const monthlyRevenueMap = {};
+  paymentRows
+    .filter((row) => !state.dashboardFilters.studentId || row.studentId === state.dashboardFilters.studentId)
+    .forEach((row) => {
+      const key = monthKey(row.date);
+      monthlyRevenueMap[key] = (monthlyRevenueMap[key] || 0) + Number(row.amountPaid || 0);
+    });
+  const tutorNameById = tutorRows.reduce((acc, tutor) => {
+    acc[tutor.id] = `${tutor.firstName || ""} ${tutor.surname || ""}`.trim();
+    return acc;
+  }, {});
+  const tutorSessions = {};
+  filteredLessons.forEach((lesson) => {
+    const key = lesson.tutorId || "unassigned";
+    tutorSessions[key] = (tutorSessions[key] || 0) + 1;
+  });
+  await renderDashboardCharts({
+    subjects: analytics.mostStudiedSubjects || [],
+    attendance: Object.entries(attendanceCounts).map(([date, count]) => ({ date, count })),
+    revenue: Object.entries(monthlyRevenueMap)
+      .sort(([a], [b]) => (a > b ? 1 : -1))
+      .map(([month, amount]) => ({ month, amount: Number(amount.toFixed(2)) })),
+    tutorEffectiveness: Object.entries(tutorSessions)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 8)
+      .map(([tutorId, count]) => ({ tutor: tutorNameById[tutorId] || tutorId, count }))
+  });
   updateHeaderProfile(profile);
 
   refs.main.querySelector("#dashboardFilterApplyForm")?.addEventListener("submit", async (event) => {
@@ -502,6 +565,9 @@ async function renderStudents() {
       await renderStudents();
       await openModal(studentQrModalTemplate(createdStudent));
       const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
+      if (!canvas) {
+        throw new Error("QR preview area is unavailable.");
+      }
       await renderStudentQr(canvas, createdStudent);
       refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
         try {
@@ -518,6 +584,25 @@ async function renderStudents() {
           showToast(error?.message || "QR print failed.", "error");
         }
       });
+
+      if (navigator.onLine && profile?.endpoint) {
+        (async () => {
+          try {
+            const upload = await saveStudentQrToDrive(profile, {
+              tenantId: profile?.tenantId || accountId,
+              studentId: createdStudent.id,
+              dataUrl: canvas.toDataURL("image/png")
+            });
+            await updateStudent(createdStudent.id, {
+              qrDriveFileId: upload.fileId || "",
+              qrDriveFileName: upload.fileName || ""
+            }, accountId);
+            showToast("QR backup saved to tenant Google Drive folder.", "success");
+          } catch (error) {
+            showToast(`Student saved locally. QR Drive upload failed: ${error?.message || "Unknown error"}`, "error");
+          }
+        })();
+      }
     } catch (error) {
       showToast(error.message, "error");
     }
@@ -526,11 +611,16 @@ async function renderStudents() {
   refs.main.querySelector("#btnOpenScanner")?.addEventListener("click", async () => {
     const { qrScannerModalTemplate } = await import("../components/qrScanner.js");
     await openModal(qrScannerModalTemplate());
-    const scanner = new StudentQrScanner("qrScannerRegion");
     const settingsNow = await getAppSettings();
+    let scanner = null;
 
     const handleScan = async (decodedText) => {
-      const studentId = parseStudentIdFromQr(decodedText, settingsNow.qrFormat);
+      const qrPayload = parseStudentQrPayload(decodedText, settingsNow.qrFormat);
+      const studentId = qrPayload.studentId || parseStudentIdFromQr(decodedText, settingsNow.qrFormat);
+      if (qrPayload.tenantId && qrPayload.tenantId !== (profile?.tenantId || accountId)) {
+        showToast("QR belongs to a different tenant and cannot be checked in here.", "error");
+        return;
+      }
       const student = await getStudentById(studentId);
       if (!student || student.accountId !== accountId) {
         showToast("Scanned code did not match an active student.", "error");
@@ -545,6 +635,8 @@ async function renderStudents() {
       await createLesson({
         studentId: student.id,
         date: scheduledLesson?.date || todayISODate(),
+        tutorId: scheduledLesson?.tutorId || "",
+        tutorName: scheduledLesson?.tutorName || "",
         subject: scheduledLesson?.subject || student.subjects?.[0] || settingsNow.subjects?.[0] || "General",
         category: scheduledLesson?.category || settingsNow.lessonCategories?.[0] || "",
         durationMinutes: scheduledLesson?.durationMinutes || settingsNow.defaultLessonDuration || 60,
@@ -567,6 +659,7 @@ async function renderStudents() {
     };
 
     try {
+      scanner = new StudentQrScanner("qrScannerRegion");
       await scanner.start(handleScan);
       refs.modalRoot.querySelector("#stopScannerBtn")?.addEventListener("click", async () => {
         await scanner.stop();
@@ -608,6 +701,9 @@ async function renderStudents() {
         }
         await openModal(studentQrModalTemplate(student));
         const canvas = refs.modalRoot.querySelector("#studentQrCanvas");
+        if (!canvas) {
+          throw new Error("QR preview area is unavailable.");
+        }
         await renderStudentQr(canvas, student);
         refs.modalRoot.querySelector("#downloadQrBtn")?.addEventListener("click", () => {
           try {
@@ -631,10 +727,49 @@ async function renderStudents() {
   });
 }
 
+async function renderTutors() {
+  const { settings, accountId, profile } = await getViewData();
+  const { tutorManagementTemplate } = await import("../components/tutors.js");
+  const tutors = await listTutors(accountId);
+  setHTML(refs.main, tutorManagementTemplate({
+    tutors,
+    subjects: settings.subjects || []
+  }));
+  updateHeaderProfile(profile);
+
+  refs.main.querySelector("#tutorForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const subjects = [form.get("subjectPrimary"), form.get("subjectSecondary")]
+      .map((value) => sanitizeText(value, 80))
+      .filter(Boolean);
+    try {
+      await createTutor({
+        firstName: form.get("firstName"),
+        surname: form.get("surname"),
+        email: form.get("email"),
+        subjects,
+        notes: form.get("notes"),
+        rating: form.get("rating")
+      }, accountId);
+      showToast("Tutor saved.", "success");
+      formElement?.reset();
+      await refreshQueueCount();
+      await renderTutors();
+    } catch (error) {
+      showToast(error?.message || "Tutor could not be saved.", "error");
+    }
+  });
+}
+
 async function renderSchedule() {
   const { settings, accountId, profile } = await getViewData();
   const { calendarTemplate } = await import("../components/calendar.js");
-  const students = await listStudents(accountId);
+  const [students, tutors] = await Promise.all([
+    listStudents(accountId),
+    listTutors(accountId)
+  ]);
 
   if (!state.scheduleAnchorDate) {
     state.scheduleAnchorDate = todayISODate();
@@ -662,12 +797,13 @@ async function renderSchedule() {
   }, {});
   const entriesWithStudentNames = entries.map((entry) => ({
     ...entry,
-    studentName: studentNameById[entry.studentId] || entry.studentId
+    studentName: studentNameById[entry.studentId] || entry.studentName || entry.studentLabel || entry.studentId
   }));
   setHTML(refs.main, calendarTemplate({
     dateAnchor: state.scheduleAnchorDate,
     viewMode: state.scheduleViewMode,
     students,
+    tutors,
     subjects: settings.subjects || [],
     lessonCategories: settings.lessonCategories || [],
     scheduleFields: settings.scheduleCustomFields || [],
@@ -679,23 +815,32 @@ async function renderSchedule() {
 
   refs.main.querySelector("#scheduleForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const customFields = {};
     (settings.scheduleCustomFields || []).forEach((field) => {
       customFields[field.key] = form.get(`custom_${field.key}`) || "";
     });
     try {
+      const selectedStudentId = sanitizeText(form.get("studentId"), 120);
+      const selectedStudent = students.find((entry) => entry.id === selectedStudentId);
+      const selectedTutorId = sanitizeText(form.get("tutorId"), 120);
+      const selectedTutor = tutors.find((entry) => entry.id === selectedTutorId);
       await createScheduleEntry({
         date: form.get("date"),
         timeStart: form.get("timeStart"),
         durationMinutes: form.get("durationMinutes"),
-        studentId: form.get("studentId"),
+        studentId: selectedStudentId,
+        studentName: selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.surname}`.trim() : "",
+        tutorId: selectedTutorId,
+        tutorName: selectedTutor ? `${selectedTutor.firstName} ${selectedTutor.surname}`.trim() : "",
         subject: form.get("subject"),
         category: form.get("category"),
         lessonNotes: form.get("lessonNotes"),
         customFields
       }, accountId);
       showToast("Schedule item saved.", "success");
+      formElement?.reset();
       await refreshQueueCount();
       await renderSchedule();
     } catch (error) {
@@ -745,14 +890,29 @@ async function renderSchedule() {
 async function renderLessons() {
   const { settings, accountId, profile } = await getViewData();
   const { lessonEditorTemplate } = await import("../components/lessonEditor.js");
-  const [students, lessons] = await Promise.all([
+  const [students, lessons, tutors] = await Promise.all([
     listStudents(accountId),
-    listLessons(accountId)
+    listLessons(accountId),
+    listTutors(accountId)
   ]);
+  const studentNameById = students.reduce((acc, student) => {
+    acc[student.id] = `${student.firstName} ${student.surname}`.trim();
+    return acc;
+  }, {});
+  const tutorNameById = tutors.reduce((acc, tutor) => {
+    acc[tutor.id] = `${tutor.firstName} ${tutor.surname}`.trim();
+    return acc;
+  }, {});
+  const lessonsWithNames = lessons.map((lesson) => ({
+    ...lesson,
+    tutorName: tutorNameById[lesson.tutorId] || lesson.tutorName || lesson.tutorId || ""
+  }));
 
   setHTML(refs.main, lessonEditorTemplate({
-    lessons,
+    lessons: lessonsWithNames,
     students,
+    tutors,
+    studentNameById,
     subjects: settings.subjects,
     lessonCategories: settings.lessonCategories || [],
     defaultDuration: settings.defaultLessonDuration,
@@ -776,6 +936,8 @@ async function renderLessons() {
     if (noteInput && scheduled.lessonNotes) noteInput.value = scheduled.lessonNotes;
     const categoryField = refs.main.querySelector("#lessonCategory");
     if (categoryField && scheduled.category) categoryField.value = scheduled.category;
+    const tutorField = refs.main.querySelector("#lessonTutor");
+    if (tutorField && scheduled.tutorId) tutorField.value = scheduled.tutorId;
     const durationField = refs.main.querySelector("#lessonDuration");
     if (durationField && scheduled.durationMinutes) durationField.value = String(scheduled.durationMinutes);
   }
@@ -785,9 +947,13 @@ async function renderLessons() {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     try {
+      const selectedTutorId = sanitizeText(form.get("tutorId"), 120);
+      const selectedTutor = tutors.find((entry) => entry.id === selectedTutorId);
       await createLesson({
         date: form.get("date"),
         studentId: form.get("studentId"),
+        tutorId: selectedTutorId,
+        tutorName: selectedTutor ? `${selectedTutor.firstName} ${selectedTutor.surname}`.trim() : "",
         subject: form.get("subject"),
         category: form.get("category"),
         durationMinutes: form.get("durationMinutes"),
@@ -808,7 +974,7 @@ async function renderLessons() {
 
   refs.main.querySelectorAll("[data-action='lesson-pdf']").forEach((button) => {
     button.addEventListener("click", async () => {
-      const lesson = lessons.find((entry) => entry.id === button.dataset.lessonId);
+      const lesson = lessonsWithNames.find((entry) => entry.id === button.dataset.lessonId);
       if (!lesson) return;
       const student = students.find((entry) => entry.id === lesson.studentId);
       try {
@@ -821,7 +987,7 @@ async function renderLessons() {
 
   refs.main.querySelectorAll("[data-action='lesson-share']").forEach((button) => {
     button.addEventListener("click", async () => {
-      const lesson = lessons.find((entry) => entry.id === button.dataset.lessonId);
+      const lesson = lessonsWithNames.find((entry) => entry.id === button.dataset.lessonId);
       if (!lesson) return;
       const student = students.find((entry) => entry.id === lesson.studentId);
       const studentName = student ? `${student.firstName} ${student.surname}` : lesson.studentId;
@@ -982,6 +1148,47 @@ async function renderReports() {
   });
 }
 
+async function renderAi() {
+  const { settings, accountId, profile } = await getViewData();
+  const { aiAssistantTemplate } = await import("../components/aiAssistant.js");
+  const messages = await listAiMessages(accountId, "admin", 80);
+
+  setHTML(refs.main, aiAssistantTemplate({
+    aiEnabled: settings.ai?.enabled === true,
+    model: settings.ai?.model || "gemini-2.0-flash",
+    tenantId: profile?.tenantId || accountId,
+    messages
+  }));
+  updateHeaderProfile(profile);
+
+  refs.main.querySelector("#aiRefreshBtn")?.addEventListener("click", async () => {
+    await renderAi();
+  });
+
+  refs.main.querySelector("#aiPromptForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const sendBtn = refs.main.querySelector("#aiSendBtn");
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending...";
+    }
+    try {
+      const prompt = new FormData(formElement).get("prompt");
+      await askGemini({ accountId, userId: "admin", prompt });
+      showToast("AI response received.", "success");
+      formElement?.reset();
+      await renderAi();
+    } catch (error) {
+      showToast(error?.message || "AI request failed.", "error");
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send";
+      }
+    }
+  });
+}
+
 function applyUniqueAdd(list, value) {
   const clean = sanitizeText(value, 80);
   if (!clean) return list;
@@ -1091,6 +1298,8 @@ async function renderSettings() {
       await saveSyncProfile({
         label: form.get("label"),
         gmail: form.get("gmail"),
+        tenantId: form.get("tenantId"),
+        plan: form.get("plan"),
         endpoint: form.get("endpoint"),
         active: true
       });
@@ -1118,6 +1327,8 @@ async function renderSettings() {
       id: existing?.id,
       label: existing?.label || session?.displayName || email,
       gmail: email,
+      tenantId: existing?.tenantId || email.split("@")[0] || "tenant",
+      plan: existing?.plan || "starter",
       endpoint,
       active: true
     });
@@ -1136,11 +1347,23 @@ async function renderSettings() {
   refs.main.querySelector("#platformSettingsForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const themeMode = sanitizeText(form.get("themeMode"), 10) === "dark" ? "dark" : "light";
     await patchAppSettings({
-      businessName: sanitizeText(form.get("businessName"), 120) || "X-Factor Tutoring",
+      businessName: sanitizeText(form.get("businessName"), 120) || "Data Insights by Ray",
+      appName: sanitizeText(form.get("appName"), 120) || "Data Insights by Ray Platform",
       defaultLessonDuration: Math.max(15, sanitizeNumber(form.get("defaultLessonDuration"), 60)),
-      qrFormat: sanitizeText(form.get("qrFormat"), 120) || "XFACTOR:{id}"
+      qrFormat: sanitizeText(form.get("qrFormat"), 160) || "DIR:{tenantId}:{id}",
+      ui: {
+        ...(settings.ui || {}),
+        themeMode
+      }
     });
+    applyThemeMode(themeMode, document.getElementById("themeToggleBtn"));
+    const brandTitle = document.getElementById("brandTitle");
+    if (brandTitle) {
+      brandTitle.textContent = sanitizeText(form.get("businessName"), 120) || "Data Insights by Ray";
+    }
+    document.title = sanitizeText(form.get("appName"), 120) || "Data Insights by Ray Platform";
     showToast("Platform settings saved.", "success");
     await renderSettings();
   });
@@ -1157,6 +1380,23 @@ async function renderSettings() {
       sessionTtlHours: Math.max(12, sanitizeNumber(form.get("sessionTtlHours"), 336))
     });
     showToast("Authentication settings updated.", "success");
+    await renderSettings();
+  });
+
+  refs.main.querySelector("#aiSettingsForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await patchAppSettings({
+      ai: {
+        ...(settings.ai || {}),
+        enabled: String(form.get("enabled")) === "true",
+        provider: "gemini",
+        model: sanitizeText(form.get("model"), 120) || "gemini-2.0-flash",
+        apiKey: sanitizeText(form.get("apiKey"), 500),
+        systemPrompt: sanitizeText(form.get("systemPrompt"), 2400) || "You are an analytics and tutoring operations assistant."
+      }
+    });
+    showToast("AI settings updated.", "success");
     await renderSettings();
   });
 
@@ -1452,12 +1692,14 @@ export async function navigate(view) {
     await patchAppSettings({ ui: { lastView: view } });
 
     if (view === "dashboard") await renderDashboard();
+    if (view === "tutors") await renderTutors();
     if (view === "students") await renderStudents();
     if (view === "schedule") await renderSchedule();
     if (view === "lessons") await renderLessons();
     if (view === "payments") await renderPayments();
     if (view === "expenses") await renderExpenses();
     if (view === "reports") await renderReports();
+    if (view === "ai") await renderAi();
     if (view === "settings") await renderSettings();
   } catch (error) {
     showToast(error?.message || "Unable to load this section.", "error");

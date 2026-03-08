@@ -2,6 +2,7 @@ import { performance } from "node:perf_hooks";
 import { createStudent, listStudents } from "../src/students.js";
 import { logAttendance, listAttendance } from "../src/attendance.js";
 import { createPayment, listPayments } from "../src/payments.js";
+import { patchAppSettings } from "../src/storage.js";
 import { resetDatabase } from "./helpers.mjs";
 
 const ACCOUNT_ID = "stress-account";
@@ -15,6 +16,11 @@ function now() {
 
 async function run() {
   await resetDatabase();
+  await patchAppSettings({
+    tenantPlans: {
+      [ACCOUNT_ID]: "pro"
+    }
+  });
 
   let start = now();
   const studentIds = [];
@@ -22,7 +28,8 @@ async function run() {
     const student = await createStudent({
       firstName: `Student${i}`,
       surname: `Load${i}`,
-      grade: `Grade ${8 + (i % 5)}`
+      grade: `Grade ${8 + (i % 5)}`,
+      ignorePlanLimits: true
     }, ACCOUNT_ID);
     studentIds.push(student.id);
   }
@@ -33,7 +40,8 @@ async function run() {
     const studentId = studentIds[i % studentIds.length];
     await logAttendance({
       studentId,
-      checkInMethod: i % 2 === 0 ? "qr" : "manual"
+      checkInMethod: i % 2 === 0 ? "qr" : "manual",
+      skipQueue: true
     }, ACCOUNT_ID);
   }
   const attendanceMs = now() - start;
@@ -46,7 +54,8 @@ async function run() {
       amountDue: 250,
       amountPaid: i % 4 === 0 ? 250 : 200,
       date: "2026-03-07",
-      method: i % 2 === 0 ? "EFT" : "Cash"
+      method: i % 2 === 0 ? "EFT" : "Cash",
+      skipQueue: true
     }, ACCOUNT_ID);
   }
   const paymentsMs = now() - start;

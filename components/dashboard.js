@@ -22,6 +22,8 @@ export function dashboardViewTemplate(data) {
   const upcomingLessons = data.upcomingLessons || [];
   const activity = data.recentActivity || [];
   const analytics = data.analytics || {};
+  const superAdmin = data.superAdmin || null;
+  const plan = data.plan || null;
   const filters = data.filters || {};
   const filterOptions = data.filterOptions || { students: [], subjects: [], grades: [] };
 
@@ -82,6 +84,35 @@ export function dashboardViewTemplate(data) {
         </div>
       </article>
 
+      ${plan ? `
+      <article class="card">
+        <div class="card-title-row">
+          <h2>Subscription Plan</h2>
+        </div>
+        <div class="grid cols-3">
+          <div class="metric"><strong>${escapeHtml(plan.label || plan.key || "Plan")}</strong><span>Current plan</span></div>
+          <div class="metric"><strong>${Number(plan.maxStudents || 0)}</strong><span>Student limit</span></div>
+          <div class="metric"><strong>${Number(plan.maxTutors || 0)}</strong><span>Tutor limit</span></div>
+        </div>
+      </article>
+      ` : ""}
+
+      ${superAdmin ? `
+      <article class="card">
+        <div class="card-title-row">
+          <h2>SuperAdmin Overview</h2>
+        </div>
+        <div class="grid cols-3">
+          <div class="metric"><strong>${superAdmin.tenantCount ?? 0}</strong><span>Active tenants</span></div>
+          <div class="metric"><strong>${superAdmin.students ?? 0}</strong><span>Students (all tenants)</span></div>
+          <div class="metric"><strong>${superAdmin.tutors ?? 0}</strong><span>Tutors (all tenants)</span></div>
+          <div class="metric"><strong>${superAdmin.lessons ?? 0}</strong><span>Lessons logged</span></div>
+          <div class="metric"><strong>${formatCurrency(superAdmin.revenue ?? 0)}</strong><span>Total revenue</span></div>
+          <div class="metric"><strong>${formatCurrency(superAdmin.outstanding ?? 0)}</strong><span>Outstanding balances</span></div>
+        </div>
+      </article>
+      ` : ""}
+
       <article class="card">
         <div class="card-title-row">
           <h3>Today's Lessons</h3>
@@ -91,7 +122,7 @@ export function dashboardViewTemplate(data) {
             <div class="list-item">
               <div class="list-item-main">
                 <div class="list-item-title">${escapeHtml(lesson.subject || "Lesson")} | ${formatDate(lesson.date)}</div>
-                <div class="list-item-sub">${escapeHtml(lesson.studentId || "")} | ${escapeHtml(String(lesson.durationMinutes || 0))} mins</div>
+                <div class="list-item-sub">${escapeHtml(lesson.studentName || lesson.studentId || "")} | ${escapeHtml(String(lesson.durationMinutes || 0))} mins</div>
               </div>
               <span class="badge badge-success">${escapeHtml(lesson.status || "completed")}</span>
             </div>
@@ -108,7 +139,7 @@ export function dashboardViewTemplate(data) {
             <div class="list-item">
               <div class="list-item-main">
                 <div class="list-item-title">${formatDate(lesson.date)} | ${escapeHtml(lesson.subject || "General")}</div>
-                <div class="list-item-sub">${escapeHtml(lesson.studentId || "")}</div>
+                <div class="list-item-sub">${escapeHtml(lesson.studentName || lesson.studentId || "")}</div>
               </div>
             </div>
           `).join(""), `<div class="empty-state">No upcoming lessons found.</div>`)}
@@ -136,6 +167,18 @@ export function dashboardViewTemplate(data) {
             <h3>Most Studied Subjects</h3>
             <div class="list">${renderPeopleList((analytics.mostStudiedSubjects || []).map((item) => ({ ...item, studentName: item.subject })), "No subject data yet.", "count")}</div>
           </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-title-row">
+          <h3>Analytics Charts</h3>
+        </div>
+        <div class="grid cols-2">
+          <div id="chartSubjects" class="chart-box" aria-label="Most studied subjects chart"></div>
+          <div id="chartAttendance" class="chart-box" aria-label="Attendance trend chart"></div>
+          <div id="chartRevenue" class="chart-box" aria-label="Monthly revenue chart"></div>
+          <div id="chartTutorEffectiveness" class="chart-box" aria-label="Tutor effectiveness chart"></div>
         </div>
       </article>
 

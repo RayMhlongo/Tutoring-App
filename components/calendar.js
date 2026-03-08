@@ -90,6 +90,7 @@ export function calendarTemplate(data) {
     dateAnchor,
     viewMode,
     students,
+    tutors,
     subjects,
     lessonCategories,
     scheduleFields,
@@ -144,6 +145,15 @@ export function calendarTemplate(data) {
                 ${subjects.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`).join("")}
               </select>
             </div>
+            <div class="field">
+              <label for="scheduleTutor">Tutor</label>
+              <select id="scheduleTutor" class="select" name="tutorId">
+                <option value="">Unassigned</option>
+                ${(tutors || []).map((tutor) => `<option value="${escapeHtml(tutor.id)}">${escapeHtml(tutor.firstName || "")} ${escapeHtml(tutor.surname || "")}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+          <div class="split-2">
             <div class="field">
               <label for="scheduleCategory">Category</label>
               <select id="scheduleCategory" class="select" name="category">

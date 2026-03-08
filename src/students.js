@@ -3,11 +3,15 @@ import { getAppSettings, listRecords, saveRecord, getRecordById } from "./storag
 import { sanitizeObject, sanitizeText, uid } from "./utils.js";
 import { validateStudentPayload } from "./validation.js";
 
-function buildQrValue(format, studentId) {
+function buildQrValue(format, studentId, tenantId = "") {
+  const safeId = sanitizeText(studentId, 120);
+  const safeTenantId = sanitizeText(tenantId, 120);
   if (!format || !format.includes("{id}")) {
-    return `XFACTOR:${studentId}`;
+    return `DIR:${safeTenantId}:${safeId}`;
   }
-  return format.replace("{id}", studentId);
+  return format
+    .replace("{tenantId}", safeTenantId)
+    .replace("{id}", safeId);
 }
 
 async function buildQrImageDataUrl(qrValue, fallbackValue = "") {
@@ -31,9 +35,9 @@ async function buildQrImageDataUrl(qrValue, fallbackValue = "") {
   }
 }
 
-function hydrateStudentQrFields(student, qrFormat) {
+function hydrateStudentQrFields(student, qrFormat, tenantId = "") {
   if (!student) return student;
-  const qrValue = sanitizeText(student.qrValue || buildQrValue(qrFormat, student.id), 240);
+  const qrValue = sanitizeText(student.qrValue || buildQrValue(qrFormat, student.id, student.tenantId || tenantId), 240);
   return {
     ...student,
     qrValue,
@@ -55,12 +59,30 @@ export async function createStudent(payload, accountId) {
   const firstName = validated.firstName;
   const surname = validated.surname;
   const grade = validated.grade;
+  const tenantId = sanitizeText(payload.tenantId || accountId || "tenant-default", 120);
+  const isCreate = !payload.id;
+  if (isCreate && payload.ignorePlanLimits !== true) {
+    const planKey = sanitizeText(
+      settings.tenantPlans?.[accountId]
+      || settings.syncProfiles?.find((profile) => profile.id === accountId)?.plan
+      || "starter",
+      24
+    ).toLowerCase();
+    const plan = settings.planCatalog?.[planKey];
+    if (plan?.maxStudents) {
+      const existing = await listRecords(TABLES.students, accountId, { direction: "asc" });
+      if (existing.length >= Number(plan.maxStudents)) {
+        throw new Error(`Student limit reached for ${plan.label || planKey} plan (${plan.maxStudents}).`);
+      }
+    }
+  }
 
   const id = payload.id || uid("stu");
-  const qrValue = buildQrValue(settings.qrFormat, id);
+  const qrValue = buildQrValue(settings.qrFormat, id, tenantId);
   const qrImageDataUrl = await buildQrImageDataUrl(qrValue, payload.qrImageDataUrl || "");
   const record = {
     id,
+    tenantId,
     firstName,
     surname,
     grade,
@@ -71,8 +93,12 @@ export async function createStudent(payload, accountId) {
     qrImageDataUrl,
     active: payload.active !== false
   };
-  const saved = await saveRecord(TABLES.students, record, { accountId, op: "upsert", queue: true });
-  return hydrateStudentQrFields(saved, settings.qrFormat);
+  const saved = await saveRecord(TABLES.students, record, {
+    accountId,
+    op: "upsert",
+    queue: payload.skipQueue !== true
+  });
+  return hydrateStudentQrFields(saved, settings.qrFormat, tenantId);
 }
 
 export async function updateStudent(studentId, payload, accountId) {
@@ -88,7 +114,7 @@ export async function updateStudent(studentId, payload, accountId) {
 export async function listStudents(accountId, searchQuery = "") {
   const settings = await getAppSettings();
   const rows = await listRecords(TABLES.students, accountId, { direction: "asc" });
-  const hydratedRows = rows.map((row) => hydrateStudentQrFields(row, settings.qrFormat));
+  const hydratedRows = rows.map((row) => hydrateStudentQrFields(row, settings.qrFormat, accountId));
   const needle = sanitizeText(searchQuery, 120).toLowerCase();
   if (!needle) return hydratedRows;
   return hydratedRows.filter((student) => {
@@ -102,7 +128,7 @@ export async function getStudentById(studentId) {
     getAppSettings(),
     getRecordById(TABLES.students, studentId)
   ]);
-  return hydrateStudentQrFields(student, settings.qrFormat);
+  return hydrateStudentQrFields(student, settings.qrFormat, student?.accountId || "tenant-default");
 }
 
 export async function getStudentProfile(studentId, accountId) {

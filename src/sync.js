@@ -49,7 +49,7 @@ export async function requestBackgroundSync() {
   const registration = await navigator.serviceWorker.ready;
   if (!("sync" in registration)) return;
   try {
-    await registration.sync.register("xfactor-sync-queue");
+    await registration.sync.register("data-insights-sync-queue");
   } catch {
     // Background sync can fail if unsupported by browser policy.
   }

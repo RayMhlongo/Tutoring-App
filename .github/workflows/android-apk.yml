@@ -82,7 +82,7 @@ jobs:
               main_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_round.png")
               fg_icon.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher_foreground.png")
           (base / "values" / "ic_launcher_background.xml").write_text(
-              '<resources>\n    <color name="ic_launcher_background">#0e3a67</color>\n</resources>\n',
+              '<resources>\n    <color name="ic_launcher_background">#031A45</color>\n</resources>\n',
               encoding="utf-8"
           )
           PY
@@ -123,6 +123,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: xfactor-tutoring-debug-apk
+          name: data-insights-debug-apk
           path: apk-artifacts/*.apk
           if-no-files-found: error

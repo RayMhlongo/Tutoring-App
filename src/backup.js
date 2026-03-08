@@ -73,7 +73,7 @@ async function decryptJson(payload, passphrase) {
 
 function buildFileName(accountId, ext) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return `xfactor-backup-${accountId}-${stamp}.${ext}`;
+  return `data-insights-backup-${accountId}-${stamp}.${ext}`;
 }
 
 export async function createBackupPayload(accountId, options = {}) {
@@ -171,10 +171,10 @@ async function uploadDriveFile(accessToken, filename, content, mimeType = "appli
     name: filename,
     mimeType,
     appProperties: {
-      xfactorBackup: "true"
+      dirBackup: "true"
     }
   };
-  const boundary = `----xfactor-${uid("bnd")}`;
+  const boundary = `----dir-${uid("bnd")}`;
   const body = [
     `--${boundary}`,
     "Content-Type: application/json; charset=UTF-8",
@@ -202,7 +202,7 @@ async function uploadDriveFile(accessToken, filename, content, mimeType = "appli
 }
 
 async function listDriveBackups(accessToken) {
-  const q = encodeURIComponent("appProperties has { key='xfactorBackup' and value='true' } and trashed=false");
+  const q = encodeURIComponent("appProperties has { key='dirBackup' and value='true' } and trashed=false");
   const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime)&pageSize=20`, {
     headers: {
       Authorization: `Bearer ${accessToken}`

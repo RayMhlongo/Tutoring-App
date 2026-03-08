@@ -21,6 +21,7 @@ export async function createScheduleEntry(payload, accountId) {
   const validated = validateSchedulePayload(payload, settings.defaultLessonDuration || 60);
   const date = validated.date;
   const studentId = validated.studentId;
+  const studentName = sanitizeText(payload.studentName || "", 160);
   const durationMinutes = Math.max(15, sanitizeNumber(validated.durationMinutes, settings.defaultLessonDuration || 60));
   const timeStart = normalizeTime(validated.timeStart || "08:00");
   const timeEnd = normalizeTime(payload.timeEnd || calcEndTime(timeStart, durationMinutes));
@@ -31,6 +32,9 @@ export async function createScheduleEntry(payload, accountId) {
     timeStart,
     timeEnd,
     studentId,
+    studentName,
+    tutorId: sanitizeText(payload.tutorId || "", 120),
+    tutorName: sanitizeText(payload.tutorName || "", 160),
     subject: sanitizeText(payload.subject || "", 80),
     durationMinutes,
     category: sanitizeText(payload.category || "", 80),

@@ -1,8 +1,9 @@
 {
-  "name": "xfactor-tutoring",
+  "name": "data-insights-by-ray-platform",
   "version": "1.0.0",
   "private": true,
-  "description": "X-Factor Tutoring Management PWA",
+  "type": "module",
+  "description": "Data Insights by Ray multi-tenant tutoring and analytics platform",
   "scripts": {
     "serve": "npx http-server . -p 4173 -c-1",
     "test": "node --import ./tests/setup.mjs --test tests/*.test.mjs",
@@ -14,7 +15,9 @@
   "dependencies": {
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
-    "@capacitor/core": "^8.2.0"
+    "@capacitor/core": "^8.2.0",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "dexie": "^4.2.1",

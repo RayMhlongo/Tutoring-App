@@ -1,4 +1,4 @@
-const CACHE_VERSION = "xfactor-v1.1.2";
+const CACHE_VERSION = "data-insights-v2.1.0";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -21,9 +21,12 @@ const APP_SHELL = [
   "./src/auth.js",
   "./src/backup.js",
   "./src/analytics.js",
+  "./src/charts.js",
+  "./src/ai.js",
   "./src/qr.js",
   "./src/scheduler.js",
   "./src/students.js",
+  "./src/tutors.js",
   "./src/lessons.js",
   "./src/attendance.js",
   "./src/payments.js",
@@ -35,9 +38,13 @@ const APP_SHELL = [
   "./components/studentProfile.js",
   "./components/calendar.js",
   "./components/lessonEditor.js",
+  "./components/tutors.js",
+  "./components/aiAssistant.js",
   "./components/qrScanner.js",
   "./components/settings.js",
-  "./assets/logo/xfactor-logo.svg",
+  "./assets/logo/data-insights-logo.svg",
+  "./assets/vendor/qrcode.min.js",
+  "./assets/vendor/html5-qrcode.min.js",
   "./icons/icon-192x192.png",
   "./icons/icon-512x512.png",
   "./icons/icon-maskable-512x512.png"
@@ -117,7 +124,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("sync", (event) => {
-  if (event.tag === "xfactor-sync-queue") {
+  if (event.tag === "data-insights-sync-queue") {
     event.waitUntil((async () => {
       const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       clients.forEach((client) => client.postMessage({ type: "TRIGGER_SYNC_FROM_SW" }));

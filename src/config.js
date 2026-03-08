@@ -1,17 +1,23 @@
 export const APP_INFO = {
-  name: "X-Factor Tutoring Management",
-  dbName: "xfactor-tutoring-db",
-  dbVersion: 2,
-  tenantId: "xfactor-default"
+  name: "Data Insights by Ray Platform",
+  dbName: "data-insights-ray-db",
+  dbVersion: 3,
+  tenantId: "dir-default"
 };
 
 export const TABLES = {
   students: "students",
+  tutors: "tutors",
   lessons: "lessons",
+  assignments: "assignments",
   attendance: "attendance",
   payments: "payments",
   expenses: "expenses",
   schedule: "schedule",
+  messages: "messages",
+  notifications: "notifications",
+  performanceMetrics: "performanceMetrics",
+  businessMetrics: "businessMetrics",
   reports: "reports",
   syncQueue: "syncQueue",
   settings: "settings"
@@ -19,11 +25,17 @@ export const TABLES = {
 
 export const SNAPSHOT_TABLES = [
   TABLES.students,
+  TABLES.tutors,
   TABLES.lessons,
+  TABLES.assignments,
   TABLES.attendance,
   TABLES.payments,
   TABLES.expenses,
   TABLES.schedule,
+  TABLES.messages,
+  TABLES.notifications,
+  TABLES.performanceMetrics,
+  TABLES.businessMetrics,
   TABLES.reports
 ];
 
@@ -44,8 +56,9 @@ export const DEFAULT_GRADES = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  appVersion: "1.0.0",
-  businessName: "X-Factor Tutoring",
+  appVersion: "2.1.0",
+  businessName: "Data Insights by Ray",
+  appName: "Data Insights by Ray Platform",
   customStudentFields: [
     { key: "school", label: "School", type: "text" },
     { key: "parentName", label: "Parent Name", type: "text" },
@@ -61,8 +74,32 @@ export const DEFAULT_SETTINGS = {
   grades: DEFAULT_GRADES,
   paymentTypes: ["EFT", "Cash", "Card"],
   defaultLessonDuration: 60,
-  qrFormat: "XFACTOR:{id}",
+  qrFormat: "DIR:{tenantId}:{id}",
   parentCommunicationTemplate: "Today {student} worked on {subject}. Homework: {homework}. Notes: {progress}.",
+  themePalette: {
+    primary: "#031A45",
+    secondary: "#0A4F96",
+    accent: "#50E7E8"
+  },
+  planCatalog: {
+    starter: { key: "starter", label: "Starter", maxStudents: 80, maxTutors: 4 },
+    growth: { key: "growth", label: "Growth", maxStudents: 300, maxTutors: 15 },
+    pro: { key: "pro", label: "Pro", maxStudents: 2000, maxTutors: 100 }
+  },
+  tenantPlans: {
+    "local-profile": "starter"
+  },
+  superAdmin: {
+    enabled: true,
+    companyName: "Data Insights by Ray"
+  },
+  ai: {
+    enabled: false,
+    provider: "gemini",
+    apiKey: "",
+    model: "gemini-2.0-flash",
+    systemPrompt: "You are an analytics and tutoring operations assistant."
+  },
   dashboardFilters: {
     studentId: "",
     subject: "",
@@ -84,7 +121,7 @@ export const DEFAULT_SETTINGS = {
     googleEnabled: false,
     googleClientId: "",
     googleSheetsEndpoint: "",
-    allowedGoogleEmail: "xfactortutoring2@gmail.com",
+    allowedGoogleEmail: "",
     sessionTtlHours: 336
   },
   developer: {
@@ -94,15 +131,17 @@ export const DEFAULT_SETTINGS = {
   syncProfiles: [
     {
       id: "local-profile",
-      label: "X-Factor Owner",
-      gmail: "xfactortutoring2@gmail.com",
+      label: "Data Insights Main Tenant",
+      gmail: "",
+      tenantId: "dir-default",
       endpoint: "",
       active: true
     }
   ],
   activeProfileId: "local-profile",
   ui: {
-    lastView: "dashboard"
+    lastView: "dashboard",
+    themeMode: "light"
   }
 };
 

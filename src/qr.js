@@ -6,6 +6,9 @@ function escapeRegex(value) {
 
 function normalizeCameraError(error) {
   const raw = String(error?.message || error?.name || "").toLowerCase();
+  if (raw.includes("securityerror") || raw.includes("secure context")) {
+    return "Camera requires HTTPS (or installed app mode) on this browser.";
+  }
   if (raw.includes("notallowed") || raw.includes("permission denied") || raw.includes("denied")) {
     return "Camera permission denied. Allow camera access for this app and try again.";
   }
@@ -18,29 +21,59 @@ function normalizeCameraError(error) {
   return error?.message || "Camera could not start.";
 }
 
-export function buildQrValue(qrFormat, studentId) {
-  const format = sanitizeText(qrFormat || "XFACTOR:{id}", 120);
-  if (!format.includes("{id}")) return `XFACTOR:${studentId}`;
-  return format.replace("{id}", studentId);
+export function buildQrValue(qrFormat, studentId, tenantId = "") {
+  const format = sanitizeText(qrFormat || "DIR:{tenantId}:{id}", 160);
+  const safeStudentId = sanitizeText(studentId, 120);
+  const safeTenantId = sanitizeText(tenantId, 120);
+  if (!format.includes("{id}")) return `DIR:${safeTenantId}:${safeStudentId}`;
+  return format
+    .replace("{tenantId}", safeTenantId)
+    .replace("{id}", safeStudentId);
 }
 
-export function parseStudentIdFromQr(scannedValue, qrFormat) {
+export function parseStudentQrPayload(scannedValue, qrFormat) {
   const value = sanitizeText(scannedValue, 220);
-  const format = sanitizeText(qrFormat || "XFACTOR:{id}", 120);
-  if (!value) return "";
+  const format = sanitizeText(qrFormat || "DIR:{tenantId}:{id}", 160);
+  if (!value) return { studentId: "", tenantId: "", raw: "" };
 
   if (format.includes("{id}")) {
-    const regexText = `^${escapeRegex(format).replace("\\{id\\}", "(.+?)")}$`;
+    const regexText = `^${escapeRegex(format)
+      .replace("\\{tenantId\\}", "(?<tenantId>.+?)")
+      .replace("\\{id\\}", "(?<id>.+?)")}$`;
     const match = value.match(new RegExp(regexText));
-    if (match?.[1]) {
-      return sanitizeText(match[1], 120);
+    if (match?.groups?.id || match?.[1]) {
+      return {
+        studentId: sanitizeText(match.groups?.id || match[1], 120),
+        tenantId: sanitizeText(match.groups?.tenantId || "", 120),
+        raw: value
+      };
     }
   }
 
-  if (value.startsWith("XFACTOR:")) {
-    return sanitizeText(value.slice(8), 120);
+  if (value.startsWith("DIR:")) {
+    const parts = value.split(":");
+    return {
+      tenantId: sanitizeText(parts[1] || "", 120),
+      studentId: sanitizeText(parts.slice(2).join(":") || "", 120),
+      raw: value
+    };
   }
-  return sanitizeText(value, 120);
+  if (value.startsWith("XFACTOR:")) {
+    return {
+      tenantId: "",
+      studentId: sanitizeText(value.slice(8), 120),
+      raw: value
+    };
+  }
+  return {
+    tenantId: "",
+    studentId: sanitizeText(value, 120),
+    raw: value
+  };
+}
+
+export function parseStudentIdFromQr(scannedValue, qrFormat) {
+  return parseStudentQrPayload(scannedValue, qrFormat).studentId;
 }
 
 export async function generateQrToCanvas(canvasElement, value) {
@@ -112,11 +145,33 @@ export class StudentQrScanner {
     this.permissionChecked = false;
   }
 
+  async ensureCapacitorCameraPermission() {
+    const cap = window.Capacitor;
+    const cameraPlugin = cap?.Plugins?.Camera;
+    if (!cap?.isNativePlatform?.() || !cameraPlugin) return;
+    try {
+      const status = await cameraPlugin.checkPermissions?.();
+      const cameraState = String(status?.camera || "");
+      if (cameraState === "granted" || cameraState === "limited") return;
+      const requested = await (cameraPlugin.requestPermissions?.({ permissions: ["camera"] }) || cameraPlugin.requestPermissions?.());
+      const requestedState = String(requested?.camera || "");
+      if (requestedState !== "granted" && requestedState !== "limited") {
+        throw new Error("Camera permission denied by device settings.");
+      }
+    } catch (error) {
+      throw new Error(normalizeCameraError(error));
+    }
+  }
+
   async ensureCameraPermission() {
     if (this.permissionChecked) return;
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Camera API is unavailable on this device.");
     }
+    if (!window.isSecureContext && !window.Capacitor?.isNativePlatform?.()) {
+      throw new Error("Camera requires HTTPS or installed app mode.");
+    }
+    await this.ensureCapacitorCameraPermission();
     let stream = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -157,10 +212,15 @@ export class StudentQrScanner {
     const errorHandler = (errorMessage) => {
       if (typeof onError === "function") onError(errorMessage);
     };
-    const scannerOptions = { fps: 10, qrbox: 230 };
+    const scannerOptions = {
+      fps: 10,
+      qrbox: { width: 230, height: 230 },
+      aspectRatio: 1.333333
+    };
     const attempts = [
       { facingMode: { exact: "environment" } },
-      { facingMode: "environment" }
+      { facingMode: "environment" },
+      { facingMode: { ideal: "environment" } }
     ];
     let lastError = null;
     for (const camera of attempts) {

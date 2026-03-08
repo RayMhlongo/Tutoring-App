@@ -30,7 +30,8 @@ function renderProfile(profile, activeProfileId) {
     <div class="list-item">
       <div class="list-item-main">
         <div class="list-item-title">${escapeHtml(profile.label || profile.gmail || profile.id)}</div>
-        <div class="list-item-sub">${escapeHtml(profile.gmail || "No Gmail set")} | ${escapeHtml(profile.endpoint || "No endpoint")}</div>
+        <div class="list-item-sub">${escapeHtml(profile.gmail || "No Gmail set")} | Tenant: ${escapeHtml(profile.tenantId || profile.id)} | Plan: ${escapeHtml((profile.plan || "starter").toUpperCase())}</div>
+        <div class="list-item-sub">${escapeHtml(profile.endpoint || "No endpoint")}</div>
       </div>
       <div class="action-row">
         <button class="btn ${active ? "btn-secondary" : "btn-outline"} btn-small" data-action="activate-profile" data-profile-id="${escapeHtml(profile.id)}" type="button">${active ? "Active" : "Use"}</button>
@@ -69,7 +70,11 @@ export function settingsTemplate(data) {
         <form id="platformSettingsForm" class="split-3">
           <div class="field">
             <label for="businessName">Business Name</label>
-            <input id="businessName" class="input" name="businessName" type="text" value="${escapeHtml(settings.businessName || "X-Factor Tutoring")}" required>
+            <input id="businessName" class="input" name="businessName" type="text" value="${escapeHtml(settings.businessName || "Data Insights by Ray")}" required>
+          </div>
+          <div class="field">
+            <label for="appName">App Name</label>
+            <input id="appName" class="input" name="appName" type="text" value="${escapeHtml(settings.appName || settings.businessName || "Data Insights by Ray Platform")}" required>
           </div>
           <div class="field">
             <label for="defaultLessonDuration">Default lesson duration (minutes)</label>
@@ -77,7 +82,14 @@ export function settingsTemplate(data) {
           </div>
           <div class="field">
             <label for="qrFormat">QR Format</label>
-            <input id="qrFormat" class="input" name="qrFormat" type="text" value="${escapeHtml(settings.qrFormat || "XFACTOR:{id}")}">
+            <input id="qrFormat" class="input" name="qrFormat" type="text" value="${escapeHtml(settings.qrFormat || "DIR:{tenantId}:{id}")}">
+          </div>
+          <div class="field">
+            <label for="themeMode">Theme Mode</label>
+            <select id="themeMode" class="select" name="themeMode">
+              <option value="light" ${settings.ui?.themeMode === "dark" ? "" : "selected"}>Light</option>
+              <option value="dark" ${settings.ui?.themeMode === "dark" ? "selected" : ""}>Dark</option>
+            </select>
           </div>
           <button class="btn btn-primary" type="submit">Save Platform Settings</button>
         </form>
@@ -187,6 +199,36 @@ export function settingsTemplate(data) {
 
       <article class="card">
         <div class="card-title-row">
+          <h3>AI Assistant (Gemini)</h3>
+        </div>
+        ${isDeveloperUnlocked ? `
+        <form id="aiSettingsForm" class="split-3">
+          <label class="field">
+            <span>Enable AI Assistant</span>
+            <select class="select" name="enabled">
+              <option value="false" ${settings.ai?.enabled ? "" : "selected"}>Disabled</option>
+              <option value="true" ${settings.ai?.enabled ? "selected" : ""}>Enabled</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Gemini Model</span>
+            <input class="input" name="model" type="text" value="${escapeHtml(settings.ai?.model || "gemini-2.0-flash")}">
+          </label>
+          <label class="field">
+            <span>Gemini API Key</span>
+            <input class="input" name="apiKey" type="password" value="${escapeHtml(settings.ai?.apiKey || "")}" placeholder="AIza...">
+          </label>
+          <label class="field">
+            <span>System Prompt</span>
+            <textarea class="textarea" name="systemPrompt">${escapeHtml(settings.ai?.systemPrompt || "")}</textarea>
+          </label>
+          <button class="btn btn-primary" type="submit">Save AI Settings</button>
+        </form>
+        ` : `<p class="help-text">Locked. Unlock APP Developer to configure Gemini integration.</p>`}
+      </article>
+
+      <article class="card">
+        <div class="card-title-row">
           <h3>Google Sync Accounts</h3>
         </div>
         ${isDeveloperUnlocked ? `
@@ -201,6 +243,20 @@ export function settingsTemplate(data) {
               <div class="field">
                 <label for="profileGmail">Gmail Account</label>
                 <input id="profileGmail" name="gmail" class="input" type="email" placeholder="owner@gmail.com">
+              </div>
+              <div class="field">
+                <label for="profileTenantId">Tenant ID</label>
+                <input id="profileTenantId" name="tenantId" class="input" type="text" placeholder="tenant-alpha">
+              </div>
+            </div>
+            <div class="split-3">
+              <div class="field">
+                <label for="profilePlan">Subscription Plan</label>
+                <select id="profilePlan" name="plan" class="select">
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="pro">Pro</option>
+                </select>
               </div>
               <div class="field">
                 <label for="profileEndpoint">Google Apps Script Endpoint</label>

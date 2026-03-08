@@ -4,11 +4,13 @@ import { escapeHtml, renderMaybe } from "../src/view-utils.js";
 export function lessonEditorTemplate(data) {
   const lessons = data.lessons || [];
   const students = data.students || [];
+  const tutors = data.tutors || [];
   const subjects = data.subjects || [];
   const lessonCategories = data.lessonCategories || [];
   const defaultDuration = data.defaultDuration || 60;
   const prefillStudentId = data.prefillStudentId || "";
   const prefillContext = data.prefillContext || null;
+  const studentNameById = data.studentNameById || {};
 
   return `
     <section class="view" data-view-root="lessons">
@@ -41,7 +43,14 @@ export function lessonEditorTemplate(data) {
               </select>
             </div>
           </div>
-          <div class="split-2">
+          <div class="split-3">
+            <div class="field">
+              <label for="lessonTutor">Tutor</label>
+              <select id="lessonTutor" class="select" name="tutorId">
+                <option value="">Unassigned</option>
+                ${tutors.map((tutor) => `<option value="${escapeHtml(tutor.id)}">${escapeHtml(tutor.firstName || "")} ${escapeHtml(tutor.surname || "")}</option>`).join("")}
+              </select>
+            </div>
             <div class="field">
               <label for="lessonCategory">Lesson Category</label>
               <select id="lessonCategory" class="select" name="category">
@@ -88,7 +97,7 @@ export function lessonEditorTemplate(data) {
             <div class="list-item">
               <div class="list-item-main">
                 <div class="list-item-title">${formatDate(lesson.date)} | ${escapeHtml(lesson.subject || "General")}</div>
-                <div class="list-item-sub">Student: ${escapeHtml(lesson.studentId || "")} | ${escapeHtml(String(lesson.durationMinutes || 0))} mins</div>
+                <div class="list-item-sub">Student: ${escapeHtml(studentNameById[lesson.studentId] || lesson.studentName || lesson.studentId || "")} | Tutor: ${escapeHtml(lesson.tutorName || lesson.tutorId || "Unassigned")} | ${escapeHtml(String(lesson.durationMinutes || 0))} mins</div>
               </div>
               <div class="action-row">
                 <button class="btn btn-outline btn-small" data-action="lesson-pdf" data-lesson-id="${escapeHtml(lesson.id)}" type="button">PDF</button>

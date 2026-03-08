@@ -3,7 +3,7 @@ import { listTodaysLessons, listUpcomingLessons } from "./lessons.js";
 import { listTodaysAttendance } from "./attendance.js";
 import { getOutstandingPayments, listExpenses, listPayments } from "./payments.js";
 import { getStudentById } from "./students.js";
-import { listRecords, loadAccountSnapshot, saveRecord } from "./storage.js";
+import { getAppSettings, listRecords, loadAccountSnapshot, saveRecord } from "./storage.js";
 import {
   downloadText,
   formatCurrency,
@@ -25,7 +25,7 @@ function applyFilters(records, filters = {}) {
 }
 
 export async function buildDashboardSnapshot(accountId, filters = {}) {
-  const [todayLessonsRaw, upcomingLessonsRaw, attendanceToday, paymentsRaw, outstandingRaw, expensesRaw, allLessonsRaw, scheduleRaw] = await Promise.all([
+  const [todayLessonsRaw, upcomingLessonsRaw, attendanceToday, paymentsRaw, outstandingRaw, expensesRaw, allLessonsRaw, scheduleRaw, studentsRaw] = await Promise.all([
     listTodaysLessons(accountId),
     listUpcomingLessons(accountId),
     listTodaysAttendance(accountId),
@@ -33,13 +33,27 @@ export async function buildDashboardSnapshot(accountId, filters = {}) {
     getOutstandingPayments(accountId),
     listExpenses(accountId),
     listRecords(TABLES.lessons, accountId),
-    listRecords(TABLES.schedule, accountId)
+    listRecords(TABLES.schedule, accountId),
+    listRecords(TABLES.students, accountId)
   ]);
+  const studentNameById = studentsRaw.reduce((acc, student) => {
+    acc[student.id] = `${student.firstName || ""} ${student.surname || ""}`.trim();
+    return acc;
+  }, {});
 
-  const todayLessons = applyFilters(todayLessonsRaw, filters);
-  const upcomingLessons = applyFilters(upcomingLessonsRaw, filters);
+  const todayLessons = applyFilters(todayLessonsRaw, filters).map((item) => ({
+    ...item,
+    studentName: studentNameById[item.studentId] || item.studentName || item.studentId
+  }));
+  const upcomingLessons = applyFilters(upcomingLessonsRaw, filters).map((item) => ({
+    ...item,
+    studentName: studentNameById[item.studentId] || item.studentName || item.studentId
+  }));
   const allLessons = applyFilters(allLessonsRaw, filters);
-  const schedule = applyFilters(scheduleRaw, filters);
+  const schedule = applyFilters(scheduleRaw, filters).map((item) => ({
+    ...item,
+    studentName: studentNameById[item.studentId] || item.studentName || item.studentId
+  }));
   const payments = applyFilters(paymentsRaw, filters);
   const outstanding = applyFilters(outstandingRaw, filters);
   const expenses = applyFilters(expensesRaw, filters);
@@ -51,8 +65,8 @@ export async function buildDashboardSnapshot(accountId, filters = {}) {
 
   const recentActivity = [
     ...todayLessons.map((item) => ({ type: "lesson", dateTime: `${item.date}T12:00:00`, title: `Lesson ${item.subject || ""}`, details: item.lessonNotes || "" })),
-    ...schedule.slice(0, 8).map((item) => ({ type: "schedule", dateTime: `${item.date}T${item.timeStart || "08:00"}`, title: "Scheduled lesson", details: `${item.studentId} ${item.subject}` })),
-    ...attendanceToday.map((item) => ({ type: "attendance", dateTime: item.dateTime, title: "Student checked in", details: item.studentId })),
+    ...schedule.slice(0, 8).map((item) => ({ type: "schedule", dateTime: `${item.date}T${item.timeStart || "08:00"}`, title: "Scheduled lesson", details: `${item.studentName || item.studentId} ${item.subject}` })),
+    ...attendanceToday.map((item) => ({ type: "attendance", dateTime: item.dateTime, title: "Student checked in", details: studentNameById[item.studentId] || item.studentId })),
     ...payments.slice(0, 8).map((item) => ({ type: "payment", dateTime: `${item.date}T12:00:00`, title: "Payment recorded", details: formatCurrency(item.amountPaid) }))
   ]
     .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
@@ -127,7 +141,7 @@ export function downloadStudentReportPdf(report) {
     }
   };
 
-  push("X-Factor Tutoring Student Progress Report", 16, 7);
+  push("Data Insights by Ray Student Progress Report", 16, 7);
   push(`Student: ${report.summary.studentName}`, 11, 6);
   push(`Grade: ${report.summary.grade}`, 11, 6);
   push(`Lessons Logged: ${report.summary.lessons}`, 11, 6);
@@ -157,7 +171,7 @@ export async function exportAccountDataAsCsv(accountId) {
     segments.push(...tableToRows(tableName, rows));
   });
   const csv = toCSV(segments);
-  downloadText(`xfactor-${accountId}-${monthKey()}.csv`, csv, "text/csv;charset=utf-8");
+  downloadText(`data-insights-${accountId}-${monthKey()}.csv`, csv, "text/csv;charset=utf-8");
 }
 
 export async function exportAccountDataAsExcel(accountId) {
@@ -180,7 +194,7 @@ export async function exportAccountDataAsExcel(accountId) {
     const sheet = xlsx.utils.json_to_sheet(normalizedRows);
     xlsx.utils.book_append_sheet(workbook, sheet, tableName.slice(0, 31));
   });
-  xlsx.writeFile(workbook, `xfactor-${accountId}-${monthKey()}.xlsx`);
+  xlsx.writeFile(workbook, `data-insights-${accountId}-${monthKey()}.xlsx`);
 }
 
 export function buildFinanceReportRows(payments, expenses) {
@@ -208,4 +222,34 @@ export function buildFinanceReportRows(payments, expenses) {
 
 export function renderActivityLine(activity) {
   return `${formatDateTime(activity.dateTime)} - ${activity.title} (${activity.details || "-"})`;
+}
+
+export async function buildSuperAdminSnapshot() {
+  const settings = await getAppSettings();
+  const profiles = Array.isArray(settings.syncProfiles) ? settings.syncProfiles : [];
+  const summary = {
+    tenantCount: profiles.length,
+    students: 0,
+    tutors: 0,
+    lessons: 0,
+    payments: 0,
+    revenue: 0,
+    outstanding: 0
+  };
+
+  for (const profile of profiles) {
+    const snapshot = await loadAccountSnapshot(profile.id);
+    const students = Array.isArray(snapshot.students) ? snapshot.students : [];
+    const tutors = Array.isArray(snapshot.tutors) ? snapshot.tutors : [];
+    const lessons = Array.isArray(snapshot.lessons) ? snapshot.lessons : [];
+    const payments = Array.isArray(snapshot.payments) ? snapshot.payments : [];
+    summary.students += students.length;
+    summary.tutors += tutors.length;
+    summary.lessons += lessons.length;
+    summary.payments += payments.length;
+    summary.revenue += sumBy(payments, (row) => row.amountPaid || 0);
+    summary.outstanding += sumBy(payments, (row) => row.balance || 0);
+  }
+
+  return summary;
 }
