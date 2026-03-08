@@ -1,8 +1,22 @@
 import { createStripeCheckout } from "./api.js";
-import { loadStripe } from "@stripe/stripe-js";
 import { getRuntimeEnv } from "./env.js";
 import { getActiveProfile, getAppSettings, saveSyncProfile } from "./storage.js";
 import { sanitizeText } from "./utils.js";
+
+let stripeLoader = null;
+
+async function resolveStripeLoader() {
+  if (stripeLoader) return stripeLoader;
+  try {
+    const sdk = await import("@stripe/stripe-js");
+    stripeLoader = sdk.loadStripe;
+    return stripeLoader;
+  } catch {
+    const sdk = await import("https://esm.sh/@stripe/stripe-js");
+    stripeLoader = sdk.loadStripe;
+    return stripeLoader;
+  }
+}
 
 export function isSubscriptionAllowed(status) {
   const normalized = sanitizeText(status || "", 24).toLowerCase();
@@ -58,6 +72,7 @@ export async function redirectToStripeCheckout(checkout) {
   const publishableKey = sanitizeText(checkout?.publishableKey || "", 300);
   const sessionId = sanitizeText(checkout?.sessionId || "", 180);
   if (!publishableKey || !sessionId) return false;
+  const loadStripe = await resolveStripeLoader();
   const stripe = await loadStripe(publishableKey);
   if (!stripe) {
     throw new Error("Stripe.js could not initialize. Check publishable key.");

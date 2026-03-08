@@ -48,6 +48,7 @@ const APP_SHELL = [
   "./components/qrScanner.js",
   "./components/settings.js",
   "./assets/logo/data-insights-logo.svg",
+  "./assets/vendor/dexie.min.js",
   "./assets/vendor/qrcode.min.js",
   "./assets/vendor/html5-qrcode.min.js",
   "./icons/icon-192x192.png",
