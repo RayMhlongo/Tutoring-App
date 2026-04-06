@@ -16,7 +16,7 @@ const ui = {
   attendance: { query: "", group: "all", touched: false },
   payments: { query: "", group: "all", touched: false },
   expenses: { query: "", group: "all", touched: false },
-  reports: { type: "business", from: "", to: "", studentId: "", tutorId: "", aiText: "", ruleText: "", generating: false },
+  reports: { type: "business", from: "", to: "", studentId: "", tutorId: "", status: "", aiText: "", ruleText: "", generating: false },
   insights: { prompt: "monthly" }
 };
 
@@ -27,8 +27,25 @@ function routeFromHash() {
 }
 
 function navHtml() {
+  const short = {
+    dashboard: "Home",
+    students: "Stud",
+    tutors: "Tutor",
+    schedule: "Sched",
+    lessons: "Lesson",
+    attendance: "Attend",
+    payments: "Pay",
+    expenses: "Exp",
+    reports: "Reports",
+    insights: "Insights",
+    backup: "Backup",
+    settings: "Settings"
+  };
   return ROUTES.map(
-    (r) => `<button class="nav-btn ${r === route ? "active" : ""}" type="button" data-route="${esc(r)}">${esc(ROUTE_LABELS[r] || r)}</button>`
+    (r) =>
+      `<button class="nav-btn ${r === route ? "active" : ""}" type="button" data-route="${esc(r)}"><span class="label-full">${esc(
+        ROUTE_LABELS[r] || r
+      )}</span><span class="label-short">${esc(short[r] || ROUTE_LABELS[r] || r)}</span></button>`
   ).join("");
 }
 

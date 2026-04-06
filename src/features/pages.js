@@ -386,16 +386,17 @@ function renderExpenses(ctx) {
   );
 }
 
-function buildReport(ctx, type, from = "", to = "", studentId = "", tutorId = "") {
+function buildReport(ctx, type, from = "", to = "", studentId = "", tutorId = "", status = "") {
   const state = ctx.state;
   const names = resolveNames(state);
   const fitDate = (x) => (!from && !to ? true : inDateRange(x.date, from, to));
   const fitStudent = (x) => (!studentId ? true : x.studentId === studentId);
   const fitTutor = (x) => (!tutorId ? true : x.tutorId === tutorId);
-  const payments = activeRows(state, "payments").filter((x) => fitDate(x) && fitStudent(x));
-  const attendance = activeRows(state, "attendance").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
-  const lessons = activeRows(state, "lessons").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
-  const schedule = activeRows(state, "schedule").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
+  const fitStatus = (x) => (!status ? true : String(x.status || "").toLowerCase() === String(status).toLowerCase());
+  const payments = activeRows(state, "payments").filter((x) => fitDate(x) && fitStudent(x) && fitStatus(x));
+  const attendance = activeRows(state, "attendance").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x) && fitStatus(x));
+  const lessons = activeRows(state, "lessons").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x) && fitStatus(x));
+  const schedule = activeRows(state, "schedule").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x) && fitStatus(x));
   const expenses = activeRows(state, "expenses").filter((x) => fitDate(x));
   const students = activeRows(state, "students");
   const tutors = activeRows(state, "tutors");
@@ -588,13 +589,14 @@ function renderReports(ctx) {
   const to = reportUi.to || "";
   const studentId = reportUi.studentId || "";
   const tutorId = reportUi.tutorId || "";
+  const status = reportUi.status || "";
   const studentOptions = activeRows(ctx.state, "students")
     .map((x) => `<option value="${esc(x.id)}" ${studentId === x.id ? "selected" : ""}>${esc(fullName(x) || x.id)}</option>`)
     .join("");
   const tutorOptions = activeRows(ctx.state, "tutors")
     .map((x) => `<option value="${esc(x.id)}" ${tutorId === x.id ? "selected" : ""}>${esc(fullName(x) || x.id)}</option>`)
     .join("");
-  const report = buildReport(ctx, type, from, to, studentId, tutorId);
+  const report = buildReport(ctx, type, from, to, studentId, tutorId, status);
 
   return section(
     "Reports",
@@ -609,6 +611,7 @@ function renderReports(ctx) {
             <label class="field compact"><span>To</span><input class="input" type="date" name="to" value="${esc(to)}" /></label>
             <label class="field compact"><span>Student</span><select class="input" name="studentId"><option value="">All students</option>${studentOptions}</select></label>
             <label class="field compact"><span>Tutor</span><select class="input" name="tutorId"><option value="">All tutors</option>${tutorOptions}</select></label>
+            <label class="field compact"><span>Status</span><input class="input" name="status" value="${esc(status)}" placeholder="e.g. overdue, present, completed" /></label>
             <button class="btn ghost" type="submit">Apply Range</button>
           </form>
           <div class="actions-row">
@@ -849,7 +852,8 @@ export function bindRoute(ctx, notify, rerender) {
       from: String(data.from || ""),
       to: String(data.to || ""),
       studentId: String(data.studentId || ""),
-      tutorId: String(data.tutorId || "")
+      tutorId: String(data.tutorId || ""),
+      status: String(data.status || "").trim()
     };
     rerender();
   });
@@ -860,7 +864,8 @@ export function bindRoute(ctx, notify, rerender) {
     const to = ui.reports?.to || "";
     const studentId = ui.reports?.studentId || "";
     const tutorId = ui.reports?.tutorId || "";
-    const report = buildReport(ctx, type, from, to, studentId, tutorId);
+    const status = ui.reports?.status || "";
+    const report = buildReport(ctx, type, from, to, studentId, tutorId, status);
     download(`edupulse-${type}-${dateOnly()}.csv`, toCsv(report.headers, report.rows), "text/csv;charset=utf-8");
     notify("Report CSV exported");
   });
@@ -875,7 +880,8 @@ export function bindRoute(ctx, notify, rerender) {
     const to = ui.reports?.to || "";
     const studentId = ui.reports?.studentId || "";
     const tutorId = ui.reports?.tutorId || "";
-    const report = buildReport(ctx, type, from, to, studentId, tutorId);
+    const status = ui.reports?.status || "";
+    const report = buildReport(ctx, type, from, to, studentId, tutorId, status);
     ui.reports = { ...(ui.reports || {}), generating: true, ruleText: report.narrative, aiText: "" };
     rerender();
     const aiText = await generateAiSummary(state, report, from, to);
