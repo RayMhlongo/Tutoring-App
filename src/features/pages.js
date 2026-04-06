@@ -103,9 +103,8 @@ function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMappe
   });
 
   const shouldShow = ui.touched || query.length > 0 || selectedGroup !== "all";
-  const preview = rows.slice(0, 6);
-
   const chips = segmented(`${entity}-group`, allGroups, selectedGroup);
+  const summaryEntries = Object.entries(grouped).slice(0, 6);
 
   return section(
     title,
@@ -113,7 +112,7 @@ function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMappe
     `
       <div class="stack-sm">
         ${statGrid(
-          Object.entries(grouped).map(([label, value]) => ({
+          summaryEntries.map(([label, value]) => ({
             label: label[0].toUpperCase() + label.slice(1),
             value
           }))
@@ -148,12 +147,15 @@ function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMappe
           </form>
         </details>
         <section class="surface slim">
-          <div class="section-head mini"><h3>${shouldShow ? "Filtered Results" : "Recent Records Preview"}</h3></div>
-          ${table(
-            tableHeaders,
-            (shouldShow ? filtered : preview).map((row) => rowMapper(row, ctx))
-          )}
-          ${!shouldShow && rows.length > preview.length ? `<p class="muted">Showing ${preview.length} of ${rows.length}. Apply filters to view full records.</p>` : ""}
+          <div class="section-head mini"><h3>${shouldShow ? "Filtered Results" : "Results"}</h3></div>
+          ${
+            shouldShow
+              ? table(
+                  tableHeaders,
+                  filtered.map((row) => rowMapper(row, ctx))
+                )
+              : emptyState("Use search or category filters first.", "Results appear only after you narrow the data.")
+          }
         </section>
       </div>
     `
@@ -384,14 +386,17 @@ function renderExpenses(ctx) {
   );
 }
 
-function buildReport(ctx, type, from = "", to = "") {
+function buildReport(ctx, type, from = "", to = "", studentId = "", tutorId = "") {
   const state = ctx.state;
   const names = resolveNames(state);
-  const payments = activeRows(state, "payments").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
-  const attendance = activeRows(state, "attendance").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
-  const lessons = activeRows(state, "lessons").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
-  const schedule = activeRows(state, "schedule").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
-  const expenses = activeRows(state, "expenses").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const fitDate = (x) => (!from && !to ? true : inDateRange(x.date, from, to));
+  const fitStudent = (x) => (!studentId ? true : x.studentId === studentId);
+  const fitTutor = (x) => (!tutorId ? true : x.tutorId === tutorId);
+  const payments = activeRows(state, "payments").filter((x) => fitDate(x) && fitStudent(x));
+  const attendance = activeRows(state, "attendance").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
+  const lessons = activeRows(state, "lessons").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
+  const schedule = activeRows(state, "schedule").filter((x) => fitDate(x) && fitStudent(x) && fitTutor(x));
+  const expenses = activeRows(state, "expenses").filter((x) => fitDate(x));
   const students = activeRows(state, "students");
   const tutors = activeRows(state, "tutors");
 
@@ -519,11 +524,29 @@ function buildRuleInsight(ctx) {
   const overdue = buildReport(ctx, "overdue");
   const attendance = buildReport(ctx, "attendance");
   const busy = topByCount(activeRows(state, "schedule"), "date");
+  const today = new Date();
+  const startThisWeek = new Date(today);
+  startThisWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const startPrevWeek = new Date(startThisWeek);
+  startPrevWeek.setDate(startPrevWeek.getDate() - 7);
+  const endPrevWeek = new Date(startThisWeek);
+  endPrevWeek.setDate(endPrevWeek.getDate() - 1);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const thisWeekLessons = buildReport(ctx, "lessons", fmt(startThisWeek), fmt(today)).rows.length;
+  const prevWeekLessons = buildReport(ctx, "lessons", fmt(startPrevWeek), fmt(endPrevWeek)).rows.length;
+  const delta = thisWeekLessons - prevWeekLessons;
+  const trend =
+    delta === 0
+      ? "Lesson volume is stable versus last week."
+      : delta > 0
+        ? `Lesson volume is up by ${delta} compared with last week.`
+        : `Lesson volume is down by ${Math.abs(delta)} compared with last week.`;
   return [
     base.narrative,
     overdue.narrative,
     attendance.narrative,
-    busy[0] ? `Busiest day currently is ${busy[0].name} with ${busy[0].total} sessions.` : "No strong busy-day trend yet."
+    busy[0] ? `Busiest day currently is ${busy[0].name} with ${busy[0].total} sessions.` : "No strong busy-day trend yet.",
+    trend
   ].join(" ");
 }
 
@@ -563,7 +586,15 @@ function renderReports(ctx) {
   const type = reportUi.type || "business";
   const from = reportUi.from || "";
   const to = reportUi.to || "";
-  const report = buildReport(ctx, type, from, to);
+  const studentId = reportUi.studentId || "";
+  const tutorId = reportUi.tutorId || "";
+  const studentOptions = activeRows(ctx.state, "students")
+    .map((x) => `<option value="${esc(x.id)}" ${studentId === x.id ? "selected" : ""}>${esc(fullName(x) || x.id)}</option>`)
+    .join("");
+  const tutorOptions = activeRows(ctx.state, "tutors")
+    .map((x) => `<option value="${esc(x.id)}" ${tutorId === x.id ? "selected" : ""}>${esc(fullName(x) || x.id)}</option>`)
+    .join("");
+  const report = buildReport(ctx, type, from, to, studentId, tutorId);
 
   return section(
     "Reports",
@@ -576,6 +607,8 @@ function renderReports(ctx) {
           <form id="report-filters" class="filter-bar compact">
             <label class="field compact"><span>From</span><input class="input" type="date" name="from" value="${esc(from)}" /></label>
             <label class="field compact"><span>To</span><input class="input" type="date" name="to" value="${esc(to)}" /></label>
+            <label class="field compact"><span>Student</span><select class="input" name="studentId"><option value="">All students</option>${studentOptions}</select></label>
+            <label class="field compact"><span>Tutor</span><select class="input" name="tutorId"><option value="">All tutors</option>${tutorOptions}</select></label>
             <button class="btn ghost" type="submit">Apply Range</button>
           </form>
           <div class="actions-row">
@@ -814,7 +847,9 @@ export function bindRoute(ctx, notify, rerender) {
     ui.reports = {
       ...(ui.reports || {}),
       from: String(data.from || ""),
-      to: String(data.to || "")
+      to: String(data.to || ""),
+      studentId: String(data.studentId || ""),
+      tutorId: String(data.tutorId || "")
     };
     rerender();
   });
@@ -823,7 +858,9 @@ export function bindRoute(ctx, notify, rerender) {
     const type = ui.reports?.type || "business";
     const from = ui.reports?.from || "";
     const to = ui.reports?.to || "";
-    const report = buildReport(ctx, type, from, to);
+    const studentId = ui.reports?.studentId || "";
+    const tutorId = ui.reports?.tutorId || "";
+    const report = buildReport(ctx, type, from, to, studentId, tutorId);
     download(`edupulse-${type}-${dateOnly()}.csv`, toCsv(report.headers, report.rows), "text/csv;charset=utf-8");
     notify("Report CSV exported");
   });
@@ -836,7 +873,9 @@ export function bindRoute(ctx, notify, rerender) {
     const type = ui.reports?.type || "business";
     const from = ui.reports?.from || "";
     const to = ui.reports?.to || "";
-    const report = buildReport(ctx, type, from, to);
+    const studentId = ui.reports?.studentId || "";
+    const tutorId = ui.reports?.tutorId || "";
+    const report = buildReport(ctx, type, from, to, studentId, tutorId);
     ui.reports = { ...(ui.reports || {}), generating: true, ruleText: report.narrative, aiText: "" };
     rerender();
     const aiText = await generateAiSummary(state, report, from, to);

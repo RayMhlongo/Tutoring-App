@@ -16,7 +16,7 @@ const ui = {
   attendance: { query: "", group: "all", touched: false },
   payments: { query: "", group: "all", touched: false },
   expenses: { query: "", group: "all", touched: false },
-  reports: { type: "business", from: "", to: "", aiText: "", ruleText: "", generating: false },
+  reports: { type: "business", from: "", to: "", studentId: "", tutorId: "", aiText: "", ruleText: "", generating: false },
   insights: { prompt: "monthly" }
 };
 
