@@ -1,15 +1,13 @@
 {
-  "name": "edupulse-by-ray-platform",
-  "version": "1.0.0",
+  "name": "edupulse-by-ray",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "EduPulse by Ray multi-tenant tutoring SaaS platform",
+  "description": "EduPulse by Ray - offline-first tutoring management app",
   "scripts": {
-    "prepare:env": "node ./scripts/build-env.mjs",
-    "prepare:web": "npm run prepare:env && node ./scripts/prepare-web.mjs",
-    "serve": "npm run prepare:env && npx http-server . -p 4173 -c-1",
-    "test": "node --import ./tests/setup.mjs --test tests/*.test.mjs",
-    "stress:test": "node --import ./tests/setup.mjs ./tests/stress-runner.mjs",
+    "prepare:web": "node ./scripts/prepare-web.mjs",
+    "serve": "npx http-server . -p 4173 -c-1",
+    "test": "node tests/run-tests.mjs",
     "android:sync": "npm run prepare:web && npx cap sync android",
     "android:open": "npx cap open android",
     "android:build:debug": "cd android && gradlew assembleDebug"
@@ -18,11 +16,10 @@
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
-    "@google/genai": "^1.44.0",
-    "@stripe/stripe-js": "^8.9.0",
-    "dotenv": "^17.3.1",
     "html5-qrcode": "^2.3.8",
-    "qrcode": "^1.5.4"
+    "jspdf": "^4.2.1",
+    "qrcode": "^1.5.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "dexie": "^4.2.1",

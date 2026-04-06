@@ -1,140 +1,134 @@
 # EduPulse by Ray
 
-Offline-first multi-tenant tutoring SaaS platform by Data Insights by Ray.
+EduPulse by Ray is a premium offline-first tutoring management app for small tutoring businesses.
 
-Runs as:
-- Web app
-- Installable PWA
-- Android app (Capacitor APK)
+## What this rebuild changed
+- Removed SaaS complexity: no Stripe, subscriptions, tenant billing, plan limits, or super-admin tenant registry.
+- Rebuilt architecture into modular domain features with a clean local-first data layer.
+- Added robust local backup/restore, optional Google Drive backup queue, and rule-based insights with optional AI summaries.
+- Kept Android-ready Capacitor workflow and installable PWA behavior.
 
-## Architecture
-- Frontend shell: `index.html`, `src/app.js`, `src/ui.js`, `components/*`
-- Data layer: `src/storage.js` (Dexie + IndexedDB)
-- Sync engine: `src/sync.js` + `src/api.js`
-- Auth: `src/auth.js` (local + Google login)
-- Google OAuth token access for Drive/Sheets: `src/google.js`
-- AI assistant: `src/ai.js` (Gemini via `@google/genai`)
-- SaaS onboarding and billing: `src/onboarding.js`, `src/billing.js`
-- Backend (Google Apps Script): `apps-script.gs`
-- Offline runtime: `service-worker.js`
+## Stack
+- Plain modern JavaScript modules (no frontend framework lock-in)
+- IndexedDB via Dexie (local-first persistence)
+- PWA service worker with selective static caching
+- Capacitor for Android packaging
+- Optional integrations:
+  - Google Drive backup (OAuth client ID required)
+  - AI summaries (OpenAI-compatible endpoint + API key)
+  - QR generation and lightweight QR attendance check-in
 
-## Multi-Tenant Model
-- All domain records include `tenantId` and `accountId`.
-- Tenant context is selected by active sync profile (`settings.syncProfiles`).
-- Sync payloads always send `tenantId`, `accountId`, and unique `changeId`.
-- Tenant registry and status controls are managed in Settings (APP Developer lock).
-
-## Features
-- Authentication:
-  - Local admin login (offline capable)
-  - Google login (allowed email restriction)
-  - Session caching for offline use
-- Tutoring operations:
-  - Students, tutors, lessons, schedule, attendance, payments, expenses
-  - QR generation + scan check-in flow
-  - Reports/export (CSV, Excel, PDF)
-- SaaS:
-  - Tenant onboarding flow
-  - Super admin tenant controls and analytics rollup
-  - Stripe subscription checkout support
-- AI:
-  - Gemini assistant (`gemini-2.0-flash` default)
-  - Conversation history scoped per tenant/account/user
-- Offline-first:
-  - IndexedDB writes first
-  - Sync queue retry/backoff
-  - Service worker caching + background sync trigger
-
-## Environment Variables
-Create `.env` in project root:
-
-```bash
-VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
-VITE_GEMINI_API_KEY=your_gemini_api_key
-VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-VITE_STRIPE_CHECKOUT_ENDPOINT=https://script.google.com/macros/s/.../exec
+## Project Structure
+```text
+src/
+  app/              bootstrap, route, app state
+  core/             constants, validation
+  data/             db schema/client, repositories, seed/reset
+  features/         dashboard, students, tutors, schedule, lessons, attendance,
+                    payments, expenses, reports, insights, backup, settings, auth
+  integrations/     google-drive, ai, qr
+  ui/               reusable UI primitives, shell layout, theme handler
+  pwa/              service worker registration
+  utils/            shared helpers + crypto
 ```
-
-Notes:
-- `.env` is ignored by git.
-- `npm run prepare:env` generates `env.js` from `.env`.
-- Do not commit real secrets.
 
 ## Setup
 ```bash
 npm install
-npm run prepare:web
 npm run serve
 ```
-
 Open `http://localhost:4173`.
 
-## Google Cloud Configuration
-1. Create OAuth Client ID in Google Cloud Console (Web application).
-2. Add authorized origins (for local dev and production host).
-3. Set `VITE_GOOGLE_CLIENT_ID`.
-4. Create Gemini API key and set `VITE_GEMINI_API_KEY`.
-5. Create a Google Sheet + Apps Script project.
-6. Paste `apps-script.gs` and deploy as Web App.
-7. Save endpoint in APP Developer settings or `VITE_STRIPE_CHECKOUT_ENDPOINT` for billing checkout action.
+Default login:
+- Username: `admin`
+- Passcode: `1234`
 
-Apps Script actions implemented:
-- `ping`
-- `syncChange`
-- `getAll`
-- `exportSnapshot`
-- `saveQr`
-- `onboardTenant`
-- `listTenants`
-- `updateTenantStatus`
-- `createStripeCheckout`
+Change passcode in Settings immediately for production use.
 
-## Stripe Setup (Optional)
-In Apps Script project properties, set:
-- `STRIPE_SECRET_KEY`
-- `STRIPE_PRICE_STARTER`
-- `STRIPE_PRICE_GROWTH`
-- `STRIPE_PRICE_PRO`
-- `STRIPE_SUCCESS_URL`
-- `STRIPE_CANCEL_URL`
-
-In app settings (APP Developer -> Billing), set:
-- Stripe publishable key
-- Checkout endpoint
-- Plan price IDs (optional override)
-
-## Tests
+## Build and Android
 ```bash
-npm test
-npm run stress:test
-```
-
-Stress profile:
-- 1000 students
-- 10000 attendance rows
-- 5000 payments
-
-## Build Android APK
-```bash
+npm run prepare:web
 npm run android:sync
-cd android
-gradlew assembleDebug
+npm run android:open
+```
+For debug APK:
+```bash
+npm run android:build:debug
 ```
 
-Generated APK:
-- `android/app/build/outputs/apk/debug/app-debug.apk`
+## Backup and Restore
+### Local backup
+1. Open `Backup`.
+2. Click `Back Up Now` to export JSON.
+3. Optional: enable encryption + passphrase.
 
-## GitHub Actions APK Workflow
-Workflow: `.github/workflows/android-apk.yml`
+### Restore
+1. Select backup file in `Backup`.
+2. Click `Preview restore` and review metadata.
+3. Confirm overwrite checkbox.
+4. Restore.
 
-Artifacts:
-- `data-insights-debug-apk`
-- `android-gradle-build-log`
+### Google Drive backup (optional)
+1. Open `Settings -> Backup Integrations`.
+2. Enable Google Drive backup.
+3. Set Google OAuth Client ID.
+4. In `Backup`, click `Queue Cloud Backup` and then `Run Queue` when online.`r`n5. Use `Restore Latest From Drive` to recover newest cloud backup (overwrite confirmation required).
 
-## Deployment
-- Web: static hosting (optional for browser use)
-- PWA: same web build with manifest + service worker
-- Android: Capacitor build from `www` assets
+## AI Insights (optional)
+Rule-based insights always work offline.
 
-## AI/Developer Handoff
-See: `docs/ai-handoff/README.md`
+To enable AI summaries:
+1. Open `Settings -> AI Integrations`.
+2. Enable AI and set endpoint, API key, and model.
+3. Use `Insights` page to generate narrative summaries.
+
+## Data model highlights
+Core entities include:
+- students
+- tutors
+- lessons
+- attendance
+- payments
+- expenses
+- scheduleEvents
+- notes
+- reports
+- activityLog
+- backupJobs
+- settings
+
+Each business entity uses:
+- `id`
+- `createdAt`
+- `updatedAt`
+- `archivedAt`
+- `status`
+- `version`
+
+## Client Handoff
+- The app works fully offline after install.
+- Data saves locally first and is immediately available.
+- Cloud backup is optional and safe to skip.
+- If internet drops, continue working; run cloud backup queue later.
+- Keep encrypted backup files and passphrases safely.
+
+## Developer Handoff
+- Routing is hash-based and feature modules are isolated under `src/features/*`.
+- Repository contract supports `create`, `update`, `archive`, `getById`, `list`, `search`, `stats`.
+- Avoid adding SaaS/tenant abstractions unless product direction changes.
+- Keep runtime-critical libraries local (avoid fragile CDN dependencies for core flow).
+
+## Optional Integrations
+- Google Drive backup adapter (`src/integrations/google-drive/driveAdapter.js`)
+- AI adapter (`src/integrations/ai/aiAdapter.js`)
+- QR adapter (`src/integrations/qr/qr.js`)
+
+## Seed and Reset
+- Demo data seeds automatically on first launch.
+- Full reset utility available in `src/data/seed/demo.js` via `resetAllData()`.
+
+## Quality Notes
+- Mobile-first styles and touch targets
+- Dark mode with readable contrast
+- Overflow-safe cards/tables/forms
+- Restore safeguards with preview + overwrite confirmation
