@@ -1,4 +1,4 @@
-const VERSION = "edupulse-v3-20260406-hotfix1";
+const VERSION = "edupulse-v3-20260406-hotfix2";
 const STATIC_CACHE = `${VERSION}-static`;
 
 const APP_ASSETS = [
