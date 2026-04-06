@@ -1,35 +1,33 @@
-# EduPulse by Ray
+﻿# EduPulse by Ray
 
-EduPulse by Ray is a premium offline-first tutoring management app for small tutoring businesses.
+EduPulse by Ray is an offline-first tutoring operations app rebuilt for a single tutoring business instance (not SaaS), with mobile-first UX, filter-first data views, safe local backup/restore, and Android-ready packaging.
 
-## What this rebuild changed
-- Removed SaaS complexity: no Stripe, subscriptions, tenant billing, plan limits, or super-admin tenant registry.
-- Rebuilt architecture into modular domain features with a clean local-first data layer.
-- Added robust local backup/restore, optional Google Drive backup queue, and rule-based insights with optional AI summaries.
-- Kept Android-ready Capacitor workflow and installable PWA behavior.
+## What This Build Delivers
+- Single-business architecture with local admin lock/login.
+- Filter-first workflows for Students, Tutors, Schedule, Lessons, Attendance, Payments, and Expenses.
+- Balanced dashboard with KPIs, upcoming sessions, and recent activity.
+- Reports with summary + overdue analysis, CSV exports, and A4 print/PDF-ready layout.
+- Smart rule-based insights (works fully offline; AI is optional extension).
+- Safe backup/restore with metadata envelope and overwrite confirmation.
+- PWA + Capacitor Android build flow.
+- Custom branded app icons (using your provided logo).
 
-## Stack
-- Plain modern JavaScript modules (no frontend framework lock-in)
-- IndexedDB via Dexie (local-first persistence)
-- PWA service worker with selective static caching
-- Capacitor for Android packaging
-- Optional integrations:
-  - Google Drive backup (OAuth client ID required)
-  - AI summaries (OpenAI-compatible endpoint + API key)
-  - QR generation and lightweight QR attendance check-in
-
-## Project Structure
+## Current Architecture
 ```text
 src/
-  app/              bootstrap, route, app state
-  core/             constants, validation
-  data/             db schema/client, repositories, seed/reset
-  features/         dashboard, students, tutors, schedule, lessons, attendance,
-                    payments, expenses, reports, insights, backup, settings, auth
-  integrations/     google-drive, ai, qr
-  ui/               reusable UI primitives, shell layout, theme handler
-  pwa/              service worker registration
-  utils/            shared helpers + crypto
+  core/
+    constants.js
+    helpers.js
+    store.js
+  features/
+    pages.js
+  ui/
+    render.js
+  main.js
+styles/
+  main.css
+icons/
+  *.png
 ```
 
 ## Setup
@@ -39,96 +37,44 @@ npm run serve
 ```
 Open `http://localhost:4173`.
 
-Default login:
+Default access:
 - Username: `admin`
 - Passcode: `1234`
-
-Change passcode in Settings immediately for production use.
 
 ## Build and Android
 ```bash
 npm run prepare:web
 npm run android:sync
-npm run android:open
-```
-For debug APK:
-```bash
 npm run android:build:debug
 ```
+APK output:
+- `android/app/build/outputs/apk/debug/app-debug.apk`
+- mirrored to `release/app-debug.apk`
 
 ## Backup and Restore
-### Local backup
-1. Open `Backup`.
-2. Click `Back Up Now` to export JSON.
-3. Optional: enable encryption + passphrase.
+1. Open `Backup` tab.
+2. Click `Back Up Now` to export JSON (includes version, timestamp, business name, counts).
+3. For restore, choose backup file, tick overwrite confirmation, then restore.
 
-### Restore
-1. Select backup file in `Backup`.
-2. Click `Preview restore` and review metadata.
-3. Confirm overwrite checkbox.
-4. Restore.
+## Reports
+Reports tab includes:
+- Business summary metrics
+- Overdue payment report
+- CSV exports
+- A4 print layout suitable for PDF export
 
-### Google Drive backup (optional)
-1. Open `Settings -> Backup Integrations`.
-2. Enable Google Drive backup.
-3. Set Google OAuth Client ID.
-4. In `Backup`, click `Queue Cloud Backup` and then `Run Queue` when online.`r`n5. Use `Restore Latest From Drive` to recover newest cloud backup (overwrite confirmation required).
+## PWA and Cache Safety
+- Service worker enabled for web only (disabled on native Capacitor runtime).
+- Startup cache reset guard in `index.html` to avoid stale module mismatches.
 
-## AI Insights (optional)
-Rule-based insights always work offline.
+## Client Handoff Notes
+- App is fully usable offline.
+- Keep periodic backup files safely stored.
+- Change default passcode in Settings immediately.
+- Use Reports -> A4 Print/PDF for printable summaries.
 
-To enable AI summaries:
-1. Open `Settings -> AI Integrations`.
-2. Enable AI and set endpoint, API key, and model.
-3. Use `Insights` page to generate narrative summaries.
-
-## Data model highlights
-Core entities include:
-- students
-- tutors
-- lessons
-- attendance
-- payments
-- expenses
-- scheduleEvents
-- notes
-- reports
-- activityLog
-- backupJobs
-- settings
-
-Each business entity uses:
-- `id`
-- `createdAt`
-- `updatedAt`
-- `archivedAt`
-- `status`
-- `version`
-
-## Client Handoff
-- The app works fully offline after install.
-- Data saves locally first and is immediately available.
-- Cloud backup is optional and safe to skip.
-- If internet drops, continue working; run cloud backup queue later.
-- Keep encrypted backup files and passphrases safely.
-
-## Developer Handoff
-- Routing is hash-based and feature modules are isolated under `src/features/*`.
-- Repository contract supports `create`, `update`, `archive`, `getById`, `list`, `search`, `stats`.
-- Avoid adding SaaS/tenant abstractions unless product direction changes.
-- Keep runtime-critical libraries local (avoid fragile CDN dependencies for core flow).
-
-## Optional Integrations
-- Google Drive backup adapter (`src/integrations/google-drive/driveAdapter.js`)
-- AI adapter (`src/integrations/ai/aiAdapter.js`)
-- QR adapter (`src/integrations/qr/qr.js`)
-
-## Seed and Reset
-- Demo data seeds automatically on first launch.
-- Full reset utility available in `src/data/seed/demo.js` via `resetAllData()`.
-
-## Quality Notes
-- Mobile-first styles and touch targets
-- Dark mode with readable contrast
-- Overflow-safe cards/tables/forms
-- Restore safeguards with preview + overwrite confirmation
+## Developer Handoff Notes
+- Keep module boundaries: `core` (state/data), `features` (domain screens), `ui` (shared rendering).
+- Avoid reintroducing SaaS/Stripe/tenant complexity.
+- Keep list-heavy screens filter-first to prevent overload on mobile.
+- Test dark mode and mobile widths before release.
