@@ -48,4 +48,4 @@ export function bindCrudModule({ root, formId, onSubmit, onSearchChange, onArchi
   });
 }
 
-export { field };
+export { field, selectField };
