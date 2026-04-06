@@ -15,7 +15,9 @@ const ui = {
   lessons: { query: "", group: "all", touched: false },
   attendance: { query: "", group: "all", touched: false },
   payments: { query: "", group: "all", touched: false },
-  expenses: { query: "", group: "all", touched: false }
+  expenses: { query: "", group: "all", touched: false },
+  reports: { type: "business", from: "", to: "", aiText: "", ruleText: "", generating: false },
+  insights: { prompt: "monthly" }
 };
 
 function routeFromHash() {
@@ -73,6 +75,12 @@ function renderApp() {
       render();
     });
   });
+
+  const nav = document.getElementById("routeNav");
+  const active = nav?.querySelector(".nav-btn.active");
+  if (nav && active) {
+    active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
 
   document.getElementById("lockBtn")?.addEventListener("click", () => {
     state.session.ok = false;

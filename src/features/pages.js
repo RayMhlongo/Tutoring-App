@@ -25,25 +25,11 @@ function topByCount(rows, key) {
     .map(([name, total]) => ({ name, total }));
 }
 
-function getFilterFormHtml(config) {
-  return `
-    <form id="${config.id}" class="filter-bar">
-      ${config.fields
-        .map((field) => {
-          if (field.type === "select") {
-            return `<label class="field compact"><span>${esc(field.label)}</span><select class="input" name="${esc(field.name)}">${field.options
-              .map((opt) => `<option value="${esc(opt)}">${esc(opt)}</option>`)
-              .join("")}</select></label>`;
-          }
-          return `<label class="field compact"><span>${esc(field.label)}</span><input class="input" name="${esc(field.name)}" type="${
-            field.type || "text"
-          }" placeholder="${esc(field.placeholder || "")}" /></label>`;
-        })
-        .join("")}
-      <button class="btn ghost" type="submit">Apply</button>
-      <button class="btn ghost" type="button" data-action="clear-filters" data-target="${config.id}">Reset</button>
-    </form>
-  `;
+function inDateRange(value, from, to) {
+  if (!value) return false;
+  if (from && value < from) return false;
+  if (to && value > to) return false;
+  return true;
 }
 
 function renderDashboard(ctx) {
@@ -80,9 +66,7 @@ function renderDashboard(ctx) {
         { label: "Today Lessons", value: schedule.filter((x) => x.date === today).length },
         { label: "Attendance Present", value: present },
         { label: "Collected", value: money(paid, state.settings.currency) },
-        { label: "Outstanding", value: money(outstanding, state.settings.currency), hint: "Follow up required" },
-        { label: "Expenses", value: money(spent, state.settings.currency) },
-        { label: "Lesson Records", value: lessons.length }
+        { label: "Outstanding", value: money(outstanding, state.settings.currency), hint: "Follow up required" }
       ]) +
         `<div class="split-grid">
           <section class="surface slim">
@@ -94,11 +78,15 @@ function renderDashboard(ctx) {
             ${recent ? `<ul class="timeline">${recent}</ul>` : emptyState("No activity logged yet")}
           </section>
         </div>`
+        + `<details class="surface inset"><summary>More Metrics</summary>${statGrid([
+          { label: "Expenses", value: money(spent, state.settings.currency) },
+          { label: "Lesson Records", value: lessons.length }
+        ])}</details>`
     )
   );
 }
 
-function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMapper, summaryBuilder) {
+function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMapper, summaryBuilder, groupBy) {
   const rows = activeRows(ctx.state, entity);
   const ui = ctx.ui[entity] || { query: "", group: "all", touched: false };
   const query = (ui.query || "").trim().toLowerCase();
@@ -108,7 +96,7 @@ function renderEntityPage(ctx, entity, title, formFields, tableHeaders, rowMappe
   const selectedGroup = allGroups.includes(ui.group) ? ui.group : "all";
 
   const filtered = rows.filter((row) => {
-    const groupOk = selectedGroup === "all" || String(summaryBuilder([row]).groupKey || row.status || "all").toLowerCase() === selectedGroup;
+    const groupOk = selectedGroup === "all" || String(groupBy(row) || "all").toLowerCase() === selectedGroup;
     const text = JSON.stringify(row).toLowerCase();
     const queryOk = !query || text.includes(query);
     return groupOk && queryOk;
@@ -224,7 +212,8 @@ function renderStudents(ctx) {
       esc(row.guardian || "-"),
       esc(row.contact || "-")
     ],
-    studentSummary
+    studentSummary,
+    (row) => row.grade || "ungraded"
   );
 }
 
@@ -242,7 +231,8 @@ function renderTutors(ctx) {
     ],
     ["Tutor", "Subjects", "Contact", "Availability"],
     (row) => [`<strong>${esc(fullName(row))}</strong>`, esc(row.subjects || "-"), esc(row.contact || "-"), esc(clampText(row.availability || "-", 70))],
-    tutorSummary
+    tutorSummary,
+    (row) => row.subjects?.split(",")[0]?.trim()?.toLowerCase() || "general"
   );
 }
 
@@ -281,7 +271,8 @@ function renderSchedule(ctx) {
       esc(row.type || "Lesson"),
       statusBadge(row.status || "planned")
     ],
-    byStatusSummary
+    byStatusSummary,
+    (row) => row.status || "planned"
   );
 }
 
@@ -310,7 +301,8 @@ function renderLessons(ctx) {
       esc(row.duration || "60"),
       statusBadge(row.status || "planned")
     ],
-    byStatusSummary
+    byStatusSummary,
+    (row) => row.status || "planned"
   );
 }
 
@@ -335,7 +327,8 @@ function renderAttendance(ctx) {
       statusBadge(row.status || "present"),
       esc(clampText(row.note || "-", 40))
     ],
-    byStatusSummary
+    byStatusSummary,
+    (row) => row.status || "present"
   );
 }
 
@@ -368,7 +361,8 @@ function renderPayments(ctx) {
         statusBadge(row.status || "paid")
       ];
     },
-    byStatusSummary
+    byStatusSummary,
+    (row) => row.status || "paid"
   );
 }
 
@@ -385,63 +379,230 @@ function renderExpenses(ctx) {
     ],
     ["Date", "Category", "Amount", "Note"],
     (row) => [esc(row.date || "-"), esc(row.category || "-"), money(row.amount || 0, ctx.state.settings.currency), esc(clampText(row.note || "-", 50))],
-    byStatusSummary
+    byStatusSummary,
+    (row) => row.category || "general"
   );
 }
 
-function reportRows(ctx) {
-  const { state } = ctx;
-  const outstanding = activeRows(state, "payments")
-    .filter((x) => Number(x.amountDue || 0) > Number(x.amountPaid || 0))
-    .map((x) => [x.date, x.studentId, x.amountDue, x.amountPaid, Number(x.amountDue || 0) - Number(x.amountPaid || 0)]);
+function buildReport(ctx, type, from = "", to = "") {
+  const state = ctx.state;
+  const names = resolveNames(state);
+  const payments = activeRows(state, "payments").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const attendance = activeRows(state, "attendance").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const lessons = activeRows(state, "lessons").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const schedule = activeRows(state, "schedule").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const expenses = activeRows(state, "expenses").filter((x) => !from && !to ? true : inDateRange(x.date, from, to));
+  const students = activeRows(state, "students");
+  const tutors = activeRows(state, "tutors");
 
-  return {
-    summary: [
-      ["Active Students", activeRows(state, "students").length],
-      ["Active Tutors", activeRows(state, "tutors").length],
-      ["Scheduled Events", activeRows(state, "schedule").length],
-      ["Lessons", activeRows(state, "lessons").length],
-      ["Attendance", activeRows(state, "attendance").length],
-      ["Payments", activeRows(state, "payments").length],
-      ["Expenses", activeRows(state, "expenses").length]
-    ],
-    overdue: outstanding
+  const outstandingRows = payments.filter((x) => Number(x.amountDue || 0) > Number(x.amountPaid || 0));
+  const attendanceFlags = attendance.filter((x) => ["late", "absent"].includes(String(x.status)));
+  const paidTotal = payments.reduce((sum, x) => sum + Number(x.amountPaid || 0), 0);
+  const dueTotal = payments.reduce((sum, x) => sum + Number(x.amountDue || 0), 0);
+  const expenseTotal = expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
+  const all = {
+    business: {
+      title: "Business Summary",
+      summary: [
+        { label: "Revenue", value: money(paidTotal, state.settings.currency) },
+        { label: "Outstanding", value: money(Math.max(0, dueTotal - paidTotal), state.settings.currency) },
+        { label: "Expenses", value: money(expenseTotal, state.settings.currency) },
+        { label: "Lessons", value: lessons.length }
+      ],
+      headers: ["Metric", "Value"],
+      rows: [
+        ["Active Students", students.length],
+        ["Active Tutors", tutors.length],
+        ["Lessons in range", lessons.length],
+        ["Attendance records", attendance.length],
+        ["Payment records", payments.length],
+        ["Schedule events", schedule.length]
+      ],
+      narrative: `Collected ${money(paidTotal, state.settings.currency)} from ${payments.length} payments. Outstanding balance is ${money(
+        Math.max(0, dueTotal - paidTotal),
+        state.settings.currency
+      )}, with ${outstandingRows.length} overdue payment records.`
+    },
+    payments: {
+      title: "Payments Summary",
+      summary: [
+        { label: "Paid", value: money(paidTotal, state.settings.currency) },
+        { label: "Due", value: money(dueTotal, state.settings.currency) },
+        { label: "Outstanding", value: money(Math.max(0, dueTotal - paidTotal), state.settings.currency) },
+        { label: "Overdue Count", value: outstandingRows.length }
+      ],
+      headers: ["Date", "Student", "Due", "Paid", "Balance", "Status"],
+      rows: payments.map((x) => [
+        x.date || "-",
+        names.studentName(x.studentId),
+        money(x.amountDue || 0, state.settings.currency),
+        money(x.amountPaid || 0, state.settings.currency),
+        money(Math.max(0, Number(x.amountDue || 0) - Number(x.amountPaid || 0)), state.settings.currency),
+        x.status || "paid"
+      ]),
+      narrative: `${outstandingRows.length} records have unpaid balances. Average collected per payment is ${money(
+        payments.length ? paidTotal / payments.length : 0,
+        state.settings.currency
+      )}.`
+    },
+    overdue: {
+      title: "Overdue Payments",
+      summary: [
+        { label: "Overdue Records", value: outstandingRows.length },
+        { label: "Overdue Amount", value: money(outstandingRows.reduce((sum, x) => sum + Math.max(0, Number(x.amountDue || 0) - Number(x.amountPaid || 0)), 0), state.settings.currency) }
+      ],
+      headers: ["Date", "Student", "Due", "Paid", "Balance", "Reference"],
+      rows: outstandingRows.map((x) => [
+        x.date || "-",
+        names.studentName(x.studentId),
+        money(x.amountDue || 0, state.settings.currency),
+        money(x.amountPaid || 0, state.settings.currency),
+        money(Math.max(0, Number(x.amountDue || 0) - Number(x.amountPaid || 0)), state.settings.currency),
+        x.reference || "-"
+      ]),
+      narrative: `There are ${outstandingRows.length} overdue records needing follow-up.`
+    },
+    attendance: {
+      title: "Attendance Summary",
+      summary: [
+        { label: "Present", value: attendance.filter((x) => x.status === "present").length },
+        { label: "Late", value: attendance.filter((x) => x.status === "late").length },
+        { label: "Absent", value: attendance.filter((x) => x.status === "absent").length },
+        { label: "Excused", value: attendance.filter((x) => x.status === "excused").length }
+      ],
+      headers: ["Date", "Student", "Tutor", "Status", "Note"],
+      rows: attendance.map((x) => [x.date || "-", names.studentName(x.studentId), names.tutorName(x.tutorId), x.status || "-", clampText(x.note || "-", 40)]),
+      narrative: `${attendanceFlags.length} attendance flags (late/absent) were recorded in this range.`
+    },
+    students: {
+      title: "Student Summary",
+      summary: [
+        { label: "Students", value: students.length },
+        { label: "Lessons", value: lessons.length },
+        { label: "Attendance Flags", value: attendanceFlags.length }
+      ],
+      headers: ["Student", "Grade", "Subjects", "Contact"],
+      rows: students.map((x) => [fullName(x), x.grade || "-", clampText(x.subjects || "-", 30), x.contact || "-"]),
+      narrative: `Active student base is ${students.length}. Track low attendance students for early intervention.`
+    },
+    tutors: {
+      title: "Tutor Summary",
+      summary: [
+        { label: "Tutors", value: tutors.length },
+        { label: "Scheduled Sessions", value: schedule.length }
+      ],
+      headers: ["Tutor", "Subjects", "Contact", "Availability"],
+      rows: tutors.map((x) => [fullName(x), clampText(x.subjects || "-", 35), x.contact || "-", clampText(x.availability || "-", 35)]),
+      narrative: `${tutors.length} tutors currently cover ${schedule.length} scheduled sessions in this range.`
+    },
+    lessons: {
+      title: "Lesson & Activity Summary",
+      summary: [
+        { label: "Lessons", value: lessons.length },
+        { label: "Completed", value: lessons.filter((x) => x.status === "completed").length },
+        { label: "Missed", value: lessons.filter((x) => x.status === "missed").length },
+        { label: "Cancelled", value: lessons.filter((x) => x.status === "cancelled").length }
+      ],
+      headers: ["Date", "Subject", "Student", "Tutor", "Duration", "Status"],
+      rows: lessons.map((x) => [x.date || "-", x.subject || "-", names.studentName(x.studentId), names.tutorName(x.tutorId), x.duration || 60, x.status || "planned"]),
+      narrative: `Lesson delivery trend: ${lessons.filter((x) => x.status === "completed").length} completed out of ${lessons.length}.`
+    }
   };
+
+  return all[type] || all.business;
+}
+
+function buildRuleInsight(ctx) {
+  const state = ctx.state;
+  const base = buildReport(ctx, "business");
+  const overdue = buildReport(ctx, "overdue");
+  const attendance = buildReport(ctx, "attendance");
+  const busy = topByCount(activeRows(state, "schedule"), "date");
+  return [
+    base.narrative,
+    overdue.narrative,
+    attendance.narrative,
+    busy[0] ? `Busiest day currently is ${busy[0].name} with ${busy[0].total} sessions.` : "No strong busy-day trend yet."
+  ].join(" ");
+}
+
+function aiContextFromReport(state, report, from, to) {
+  return `Business: ${state.settings.businessName}\nRange: ${from || "all"} to ${to || "all"}\nReport: ${report.title}\nNarrative: ${report.narrative}\nSummary: ${JSON.stringify(
+    report.summary
+  )}\nRows: ${JSON.stringify(report.rows.slice(0, 30))}`;
+}
+
+async function generateAiSummary(state, report, from, to) {
+  if (!state.settings.aiEnabled || !state.settings.aiEndpoint || !state.settings.aiApiKey) return "";
+  try {
+    const response = await fetch(state.settings.aiEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${state.settings.aiApiKey}`
+      },
+      body: JSON.stringify({
+        model: state.settings.aiModel || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a tutoring business analyst. Summarize only from provided data context in concise plain English." },
+          { role: "user", content: aiContextFromReport(state, report, from, to) }
+        ],
+        temperature: 0.2
+      })
+    });
+    const payload = await response.json();
+    return String(payload?.choices?.[0]?.message?.content || "").trim();
+  } catch {
+    return "";
+  }
 }
 
 function renderReports(ctx) {
-  const rows = reportRows(ctx);
+  const reportUi = ctx.ui.reports || {};
+  const type = reportUi.type || "business";
+  const from = reportUi.from || "";
+  const to = reportUi.to || "";
+  const report = buildReport(ctx, type, from, to);
+
   return section(
     "Reports",
-    "Assessment-first reporting with A4 print support",
+    "Choose a report category, apply filters, preview, then export",
     `
-    <div class="stack-sm">
-      <section class="surface inset">
-        <div class="section-head mini"><h3>Report Actions</h3></div>
-        <form id="report-filters" class="filter-bar compact">
-          <label class="field compact"><span>From</span><input class="input" type="date" name="from" /></label>
-          <label class="field compact"><span>To</span><input class="input" type="date" name="to" /></label>
-          <button class="btn ghost" type="submit">Preview</button>
-        </form>
-        <div class="actions-row">
-          <button class="btn" type="button" data-action="export-summary-csv">Summary CSV</button>
-          <button class="btn ghost" type="button" data-action="export-overdue-csv">Overdue CSV</button>
-          <button class="btn ghost" type="button" data-action="print-a4">A4 Print / PDF</button>
-        </div>
-      </section>
-      <section class="surface slim report-print">
-        <div class="print-header">
-          <h3>${esc(ctx.state.settings.businessName)}</h3>
-          <p>${esc(dateOnly())} | EduPulse Report</p>
-        </div>
-        ${table(["Metric", "Value"], rows.summary.map((r) => [esc(r[0]), esc(r[1])]))}
-        ${table(
-          ["Date", "Student ID", "Due", "Paid", "Balance"],
-          rows.overdue.map((r) => [esc(r[0]), esc(r[1]), money(r[2], ctx.state.settings.currency), money(r[3], ctx.state.settings.currency), money(r[4], ctx.state.settings.currency)])
-        )}
-      </section>
-    </div>
-  `
+      <div class="stack-sm">
+        <section class="surface inset">
+          <div class="section-head mini"><h3>Report Categories</h3></div>
+          ${segmented("report-type", ["business", "payments", "overdue", "attendance", "students", "tutors", "lessons"], type)}
+          <form id="report-filters" class="filter-bar compact">
+            <label class="field compact"><span>From</span><input class="input" type="date" name="from" value="${esc(from)}" /></label>
+            <label class="field compact"><span>To</span><input class="input" type="date" name="to" value="${esc(to)}" /></label>
+            <button class="btn ghost" type="submit">Apply Range</button>
+          </form>
+          <div class="actions-row">
+            <button class="btn" type="button" data-action="export-current-csv">Export CSV</button>
+            <button class="btn ghost" type="button" data-action="print-a4">A4 Print / PDF</button>
+            <button class="btn ghost" type="button" data-action="generate-report-summary">${reportUi.generating ? "Generating..." : "Generate AI/Smart Summary"}</button>
+          </div>
+        </section>
+        <section class="surface slim report-print">
+          <div class="print-header">
+            <h3>${esc(ctx.state.settings.businessName)}</h3>
+            <p>${esc(dateOnly())} | ${esc(report.title)}${from || to ? ` | ${esc(from || "start")} - ${esc(to || "today")}` : ""}</p>
+          </div>
+          ${statGrid(report.summary)}
+          ${table(report.headers, report.rows.map((row) => row.map((value) => esc(String(value ?? "-")))))}
+          <section class="surface inset">
+            <div class="section-head mini"><h3>Smart Summary</h3></div>
+            <p>${esc(reportUi.ruleText || report.narrative)}</p>
+            ${
+              reportUi.aiText
+                ? `<div class="surface inset"><p class="muted">AI Narrative</p><p>${esc(reportUi.aiText)}</p></div>`
+                : `<p class="muted">AI summary appears here when AI endpoint + key are configured in Settings.</p>`
+            }
+          </section>
+        </section>
+      </div>
+    `
   );
 }
 
@@ -449,22 +610,13 @@ function renderInsights(ctx) {
   const payments = activeRows(ctx.state, "payments");
   const attendance = activeRows(ctx.state, "attendance");
   const schedule = activeRows(ctx.state, "schedule");
-
   const overdue = payments.filter((x) => Number(x.amountDue || 0) > Number(x.amountPaid || 0));
-  const atRisk = topByCount(attendance.filter((x) => ["absent", "late"].includes(String(x.status))), "studentId");
   const busy = topByCount(schedule, "date");
-  const tutorLoad = topByCount(schedule, "tutorId");
 
-  const tips = [
-    `Outstanding payment records: ${overdue.length}.`,
-    busy[0] ? `Busiest day is ${busy[0].name} with ${busy[0].total} sessions.` : "No scheduling trend yet.",
-    atRisk[0] ? `Student risk: ${atRisk[0].name} has ${atRisk[0].total} attendance flags.` : "No attendance risk flags today.",
-    tutorLoad[0] ? `Highest tutor load: ${tutorLoad[0].name} with ${tutorLoad[0].total} sessions.` : "Tutor load is currently light."
-  ];
-
+  const ruleSummary = buildRuleInsight(ctx);
   return section(
     "Insights Assistant",
-    "Rule-based smart summaries with optional AI-ready context",
+    "Data-grounded management insights from your real records",
     `
       ${statGrid([
         { label: "Overdue Payments", value: overdue.length },
@@ -473,9 +625,9 @@ function renderInsights(ctx) {
         { label: "Busiest Day", value: busy[0]?.name || "N/A", hint: busy[0] ? `${busy[0].total} sessions` : "Need more data" }
       ])}
       <section class="surface slim inset">
-        <div class="section-head mini"><h3>Manager Notes</h3></div>
-        <ul class="checklist">${tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
-        <p class="muted">AI extension is optional. Core insight engine works fully offline.</p>
+        <div class="section-head mini"><h3>Business Health Summary</h3></div>
+        <p>${esc(ruleSummary)}</p>
+        <p class="muted">This summary is generated from your current app data, not generic text.</p>
       </section>
     `
   );
@@ -530,6 +682,15 @@ function renderSettings(ctx) {
             <option value="auto" ${ctx.state.settings.theme === "auto" ? "selected" : ""}>Auto</option>
           </select>
         </label>
+        <label class="field"><span>Enable AI Reports</span>
+          <select class="input" name="aiEnabled">
+            <option value="false" ${ctx.state.settings.aiEnabled ? "" : "selected"}>Disabled (Rule-based only)</option>
+            <option value="true" ${ctx.state.settings.aiEnabled ? "selected" : ""}>Enabled</option>
+          </select>
+        </label>
+        <label class="field wide"><span>AI Endpoint (optional)</span><input class="input" name="aiEndpoint" value="${esc(ctx.state.settings.aiEndpoint || "")}" placeholder="https://api.openai.com/v1/chat/completions" /></label>
+        <label class="field"><span>AI Model</span><input class="input" name="aiModel" value="${esc(ctx.state.settings.aiModel || "gpt-4o-mini")}" /></label>
+        <label class="field"><span>AI API Key</span><input class="input" type="password" name="aiApiKey" value="${esc(ctx.state.settings.aiApiKey || "")}" placeholder="Stored locally on this device" /></label>
         <div class="actions-row"><button class="btn primary" type="submit">Save Settings</button></div>
       </form>
     `
@@ -626,7 +787,13 @@ export function bindRoute(ctx, notify, rerender) {
 
   document.querySelectorAll("[data-seg]").forEach((button) => {
     button.addEventListener("click", () => {
-      const entity = String(button.dataset.seg || "").split("-")[0];
+      const seg = String(button.dataset.seg || "");
+      if (seg === "report-type") {
+        ui.reports = { ...(ui.reports || {}), type: String(button.dataset.value || "business"), aiText: "" };
+        rerender();
+        return;
+      }
+      const entity = seg.split("-")[0];
       const value = String(button.dataset.value || "all").toLowerCase();
       ui[entity] = { ...(ui[entity] || {}), group: value, touched: true };
       rerender();
@@ -641,20 +808,41 @@ export function bindRoute(ctx, notify, rerender) {
     });
   });
 
-  document.querySelector("[data-action='export-summary-csv']")?.addEventListener("click", () => {
-    const rows = reportRows(ctx).summary;
-    download(`edupulse-summary-${dateOnly()}.csv`, toCsv(["Metric", "Value"], rows), "text/csv;charset=utf-8");
-    notify("Summary CSV exported");
+  document.getElementById("report-filters")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = parseForm(event.currentTarget);
+    ui.reports = {
+      ...(ui.reports || {}),
+      from: String(data.from || ""),
+      to: String(data.to || "")
+    };
+    rerender();
   });
 
-  document.querySelector("[data-action='export-overdue-csv']")?.addEventListener("click", () => {
-    const rows = reportRows(ctx).overdue;
-    download(`edupulse-overdue-${dateOnly()}.csv`, toCsv(["Date", "Student ID", "Due", "Paid", "Balance"], rows), "text/csv;charset=utf-8");
-    notify("Overdue CSV exported");
+  document.querySelector("[data-action='export-current-csv']")?.addEventListener("click", () => {
+    const type = ui.reports?.type || "business";
+    const from = ui.reports?.from || "";
+    const to = ui.reports?.to || "";
+    const report = buildReport(ctx, type, from, to);
+    download(`edupulse-${type}-${dateOnly()}.csv`, toCsv(report.headers, report.rows), "text/csv;charset=utf-8");
+    notify("Report CSV exported");
   });
 
   document.querySelector("[data-action='print-a4']")?.addEventListener("click", () => {
     window.print();
+  });
+
+  document.querySelector("[data-action='generate-report-summary']")?.addEventListener("click", async () => {
+    const type = ui.reports?.type || "business";
+    const from = ui.reports?.from || "";
+    const to = ui.reports?.to || "";
+    const report = buildReport(ctx, type, from, to);
+    ui.reports = { ...(ui.reports || {}), generating: true, ruleText: report.narrative, aiText: "" };
+    rerender();
+    const aiText = await generateAiSummary(state, report, from, to);
+    ui.reports = { ...(ui.reports || {}), generating: false, aiText, ruleText: report.narrative };
+    notify(aiText ? "AI summary generated" : "Smart summary generated (AI unavailable)");
+    rerender();
   });
 
   document.querySelector("[data-action='backup-json']")?.addEventListener("click", () => {
@@ -709,6 +897,10 @@ export function bindRoute(ctx, notify, rerender) {
     state.settings.username = String(data.username || "admin");
     state.settings.passcode = String(data.passcode || "1234");
     state.settings.theme = String(data.theme || "light");
+    state.settings.aiEnabled = String(data.aiEnabled || "false") === "true";
+    state.settings.aiEndpoint = String(data.aiEndpoint || "").trim();
+    state.settings.aiModel = String(data.aiModel || "gpt-4o-mini").trim();
+    state.settings.aiApiKey = String(data.aiApiKey || "").trim();
     notify("Settings updated");
     rerender();
   });

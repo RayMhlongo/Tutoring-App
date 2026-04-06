@@ -32,9 +32,11 @@ export function pageShell({ businessName, subtitle, online, navHtml, contentHtml
         <button class="btn ghost" id="lockBtn" type="button">Lock</button>
       </div>
     </header>
-    <nav class="route-nav" aria-label="Primary">
-      ${navHtml}
-    </nav>
+    <div class="route-nav-wrap app-sticky">
+      <nav class="route-nav" aria-label="Primary" id="routeNav">
+        ${navHtml}
+      </nav>
+    </div>
     <main class="page-body">${contentHtml}</main>
   `;
 }

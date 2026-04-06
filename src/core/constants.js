@@ -40,7 +40,11 @@ export function defaults() {
       theme: "light",
       username: "admin",
       passcode: "1234",
-      accent: "teal"
+      accent: "teal",
+      aiEnabled: false,
+      aiEndpoint: "",
+      aiApiKey: "",
+      aiModel: "gpt-4o-mini"
     },
     session: {
       ok: false,
