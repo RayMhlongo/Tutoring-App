@@ -22,6 +22,11 @@
 </head>
 <body>
   <div id="app"></div>
+  <div id="bootFallback" style="display:none;padding:1rem;font-family:Segoe UI,sans-serif;color:#132033;">
+    <h2 style="margin:0 0 .4rem;">EduPulse failed to start</h2>
+    <p style="margin:.2rem 0;">The app hit a startup error. Please reload or reinstall the latest APK.</p>
+    <pre id="bootErrorText" style="white-space:pre-wrap;background:#f3f6fb;padding:.6rem;border-radius:8px;border:1px solid #d6deea;"></pre>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="./assets/vendor/dexie.min.js"></script>
@@ -30,6 +35,33 @@
   <script src="./assets/vendor/xlsx.full.min.js"></script>
   <script src="./assets/vendor/jspdf.umd.min.js"></script>
   <script src="./env.js"></script>
+  <script>
+    (function () {
+      var shown = false;
+      function show(msg) {
+        if (shown) return;
+        shown = true;
+        var app = document.getElementById("app");
+        var fallback = document.getElementById("bootFallback");
+        var text = document.getElementById("bootErrorText");
+        if (app && app.children.length === 0) app.style.display = "none";
+        if (fallback) fallback.style.display = "block";
+        if (text) text.textContent = String(msg || "Unknown startup error.");
+      }
+      window.addEventListener("error", function (event) {
+        if (event && event.message) show(event.message);
+      });
+      window.addEventListener("unhandledrejection", function (event) {
+        show(event && event.reason ? (event.reason.message || String(event.reason)) : "Unhandled promise rejection");
+      });
+      setTimeout(function () {
+        var app = document.getElementById("app");
+        if (app && app.children.length === 0) {
+          show("Startup timed out before first render.");
+        }
+      }, 8000);
+    }());
+  </script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
