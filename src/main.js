@@ -29,23 +29,20 @@ function routeFromHash() {
 function navHtml() {
   const short = {
     dashboard: "Home",
-    students: "Stud",
-    tutors: "Tutor",
-    schedule: "Sched",
-    lessons: "Lesson",
-    attendance: "Attend",
-    payments: "Pay",
-    expenses: "Exp",
+    students: "Students",
+    tutors: "Tutors",
+    schedule: "Schedule",
+    lessons: "Lessons",
+    attendance: "Attendance",
+    payments: "Payments",
+    expenses: "Expenses",
     reports: "Reports",
     insights: "Insights",
     backup: "Backup",
     settings: "Settings"
   };
   return ROUTES.map(
-    (r) =>
-      `<button class="nav-btn ${r === route ? "active" : ""}" type="button" data-route="${esc(r)}"><span class="label-full">${esc(
-        ROUTE_LABELS[r] || r
-      )}</span><span class="label-short">${esc(short[r] || ROUTE_LABELS[r] || r)}</span></button>`
+    (r) => `<button class="nav-btn ${r === route ? "active" : ""}" type="button" data-route="${esc(r)}">${esc(short[r] || ROUTE_LABELS[r] || r)}</button>`
   ).join("");
 }
 
