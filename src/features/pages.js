@@ -723,7 +723,6 @@ function renderSettings(ctx) {
         <label class="field"><span>Business Name</span><input class="input" name="businessName" value="${esc(ctx.state.settings.businessName)}" required /></label>
         <label class="field"><span>Currency</span><input class="input" name="currency" value="${esc(ctx.state.settings.currency)}" /></label>
         <label class="field"><span>Admin Username</span><input class="input" name="username" value="${esc(ctx.state.settings.username)}" required /></label>
-        <label class="field"><span>Admin Passcode</span><input class="input" type="password" name="passcode" value="${esc(ctx.state.settings.passcode)}" required /></label>
         <label class="field"><span>Theme</span>
           <select class="input" name="theme">
             <option value="light" ${ctx.state.settings.theme === "light" ? "selected" : ""}>Light</option>
@@ -849,6 +848,11 @@ export function bindRoute(ctx, notify, rerender) {
     });
   });
 
+  const activeReportChip = document.querySelector("#report-type .chip.active");
+  if (activeReportChip) {
+    activeReportChip.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
+
   document.querySelectorAll("[data-action='clear-entity-filter']").forEach((button) => {
     button.addEventListener("click", () => {
       const entity = String(button.dataset.entity || "");
@@ -953,7 +957,6 @@ export function bindRoute(ctx, notify, rerender) {
     state.settings.businessName = String(data.businessName || "EduPulse by Ray");
     state.settings.currency = String(data.currency || "ZAR").toUpperCase();
     state.settings.username = String(data.username || "admin");
-    state.settings.passcode = String(data.passcode || "1234");
     state.settings.theme = String(data.theme || "light");
     state.settings.aiEnabled = String(data.aiEnabled || "false") === "true";
     state.settings.aiEndpoint = String(data.aiEndpoint || "").trim();

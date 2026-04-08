@@ -65,14 +65,13 @@ function renderAuth() {
     event.preventDefault();
     const fd = new FormData(event.currentTarget);
     const user = String(fd.get("username") || "").trim();
-    const passcode = String(fd.get("passcode") || "").trim();
-    if (user === state.settings.username && passcode === state.settings.passcode) {
+    if (user === state.settings.username) {
       state.session.ok = true;
       persistState();
       render();
       return;
     }
-    toast("Invalid username or passcode");
+    toast("Invalid username");
   });
 }
 
@@ -101,12 +100,6 @@ function renderApp() {
   if (nav && active) {
     active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   }
-
-  document.getElementById("lockBtn")?.addEventListener("click", () => {
-    state.session.ok = false;
-    persistState();
-    renderAuth();
-  });
 
   bindRoute(
     ctx,

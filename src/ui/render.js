@@ -29,7 +29,6 @@ export function pageShell({ businessName, subtitle, online, navHtml, contentHtml
       </div>
       <div class="top-actions">
         <span class="pill ${online ? "ok" : "warn"}">${online ? "Online" : "Offline"}</span>
-        <button class="btn ghost" id="lockBtn" type="button">Lock</button>
       </div>
     </header>
     <div class="route-nav-wrap">
@@ -45,11 +44,10 @@ export function authView() {
   return `
     <div class="auth-wrap">
       <section class="surface auth-card">
-        <h2>Secure Access</h2>
-        <p class="muted">Local admin access for your tutoring business</p>
+        <h2>Access</h2>
+        <p class="muted">Enter admin username</p>
         <form id="loginForm" class="form-grid one">
           <label class="field"><span>Username</span><input class="input" name="username" value="admin" required /></label>
-          <label class="field"><span>Passcode</span><input class="input" name="passcode" type="password" required /></label>
           <button class="btn primary" type="submit">Unlock EduPulse</button>
         </form>
       </section>
@@ -108,7 +106,7 @@ export function statusBadge(status) {
 }
 
 export function segmented(name, values, active) {
-  return `<div class="segmented" role="tablist">${values
+  return `<div class="segmented" role="tablist" id="${esc(name)}">${values
     .map(
       (value) =>
         `<button class="chip ${value === active ? "active" : ""}" type="button" data-seg="${esc(name)}" data-value="${esc(
