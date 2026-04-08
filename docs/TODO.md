@@ -1,12 +1,10 @@
-# TODO Roadmap
+﻿# TODO Roadmap
 
-1. Add full student and tutor profile detail pages with linked timelines.
-2. Add calendar month/week grid mode with drag-and-drop reschedule.
-3. Add richer report exports (Excel/PDF) with local bundled libraries.
-4. Add restore diff mode (preview exact record changes before commit).
-5. Add staff role support (owner + tutor roles) with permission scopes.
-6. Add local notification reminders for upcoming lessons.
-7. Add record-level conflict resolution for future multi-device sync.
-8. Add advanced AI prompt templates (parent updates, weekly digest).
-9. Add improved analytics charts with no CDN dependencies.
-10. Add in-app diagnostic panel and data integrity repair tools.
+1. Add pagination/virtualized rendering for very large filtered result sets.
+2. Add profile detail pages with linked timelines (student/tutor).
+3. Add local chart widgets for trends in reports.
+4. Add optional encrypted local backup mode.
+5. Add optional Google Drive backup adapter implementation.
+6. Add role-based access (owner/staff) without SaaS tenancy.
+7. Add report templates for monthly parent communication packs.
+8. Add proactive data integrity diagnostics and repair helpers.

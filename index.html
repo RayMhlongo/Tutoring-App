@@ -27,30 +27,9 @@
       }
     });
   </script>
+  <script src="./assets/vendor/dexie.min.js"></script>
   <script type="module">
-    async function hardResetRuntimeCaches() {
-      try {
-        if ("serviceWorker" in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map((r) => r.unregister()));
-        }
-        if (window.caches?.keys) {
-          const keys = await window.caches.keys();
-          await Promise.all(keys.map((k) => window.caches.delete(k)));
-        }
-      } catch (_) {
-        // continue boot even if cache cleanup fails
-      }
-    }
-
-    const marker = "edupulse_boot_reset_done_v1";
-    if (!sessionStorage.getItem(marker)) {
-      await hardResetRuntimeCaches();
-      sessionStorage.setItem(marker, "1");
-      location.reload();
-    } else {
-      await import("./src/main.js");
-    }
+    await import("./src/main.js");
   </script>
 </body>
 </html>

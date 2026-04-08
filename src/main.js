@@ -5,7 +5,7 @@ import { mountError, toast, authView, pageShell } from "./ui/render.js";
 import { renderRoute, bindRoute } from "./features/pages.js";
 
 const appEl = document.getElementById("app");
-let state = loadState();
+let state = null;
 let route = "dashboard";
 
 const ui = {
@@ -53,6 +53,12 @@ function applyTheme() {
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
 }
 
+function persistState() {
+  saveState(state).catch(() => {
+    toast("Save warning: local data write failed");
+  });
+}
+
 function renderAuth() {
   appEl.innerHTML = authView();
   document.getElementById("loginForm")?.addEventListener("submit", (event) => {
@@ -62,7 +68,7 @@ function renderAuth() {
     const passcode = String(fd.get("passcode") || "").trim();
     if (user === state.settings.username && passcode === state.settings.passcode) {
       state.session.ok = true;
-      saveState(state);
+      persistState();
       render();
       return;
     }
@@ -98,18 +104,18 @@ function renderApp() {
 
   document.getElementById("lockBtn")?.addEventListener("click", () => {
     state.session.ok = false;
-    saveState(state);
+    persistState();
     renderAuth();
   });
 
   bindRoute(
     ctx,
     (msg) => {
-      saveState(state);
+      persistState();
       toast(msg);
     },
     () => {
-      saveState(state);
+      persistState();
       render();
     }
   );
@@ -117,6 +123,7 @@ function renderApp() {
 
 function render() {
   try {
+    if (!state) return;
     applyTheme();
     if (!state.session.ok) {
       renderAuth();
@@ -143,9 +150,34 @@ window.addEventListener("offline", () => {
   render();
 });
 
-if ("serviceWorker" in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
-  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
+  try {
+    const reg = await navigator.serviceWorker.register("./service-worker.js");
+    reg.addEventListener("updatefound", () => {
+      const installing = reg.installing;
+      if (!installing) return;
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          toast("App update ready. Reload to apply.");
+        }
+      });
+    });
+  } catch {
+    // ignore registration errors
+  }
 }
 
-route = routeFromHash();
-render();
+async function bootstrap() {
+  try {
+    state = await loadState();
+    route = routeFromHash();
+    render();
+    await registerServiceWorker();
+  } catch (error) {
+    mountError(error?.message || "Startup failed");
+  }
+}
+
+bootstrap();

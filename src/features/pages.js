@@ -513,6 +513,16 @@ function buildReport(ctx, type, from = "", to = "", studentId = "", tutorId = ""
       headers: ["Date", "Subject", "Student", "Tutor", "Duration", "Status"],
       rows: lessons.map((x) => [x.date || "-", x.subject || "-", names.studentName(x.studentId), names.tutorName(x.tutorId), x.duration || 60, x.status || "planned"]),
       narrative: `Lesson delivery trend: ${lessons.filter((x) => x.status === "completed").length} completed out of ${lessons.length}.`
+    },
+    expenses: {
+      title: "Expense Summary",
+      summary: [
+        { label: "Expense Records", value: expenses.length },
+        { label: "Total Expenses", value: money(expenseTotal, state.settings.currency) }
+      ],
+      headers: ["Date", "Category", "Amount", "Note"],
+      rows: expenses.map((x) => [x.date || "-", x.category || "-", money(x.amount || 0, state.settings.currency), clampText(x.note || "-", 50)]),
+      narrative: `Total expenses in the selected range are ${money(expenseTotal, state.settings.currency)} across ${expenses.length} records.`
     }
   };
 
@@ -597,6 +607,8 @@ function renderReports(ctx) {
     .map((x) => `<option value="${esc(x.id)}" ${tutorId === x.id ? "selected" : ""}>${esc(fullName(x) || x.id)}</option>`)
     .join("");
   const report = buildReport(ctx, type, from, to, studentId, tutorId, status);
+  const narrowed = Boolean(from || to || studentId || tutorId || status);
+  const previewRows = narrowed ? report.rows : report.rows.slice(0, 30);
 
   return section(
     "Reports",
@@ -605,7 +617,7 @@ function renderReports(ctx) {
       <div class="stack-sm">
         <section class="surface inset">
           <div class="section-head mini"><h3>Report Categories</h3></div>
-          ${segmented("report-type", ["business", "payments", "overdue", "attendance", "students", "tutors", "lessons"], type)}
+          ${segmented("report-type", ["business", "payments", "overdue", "attendance", "students", "tutors", "lessons", "expenses"], type)}
           <form id="report-filters" class="filter-bar compact">
             <label class="field compact"><span>From</span><input class="input" type="date" name="from" value="${esc(from)}" /></label>
             <label class="field compact"><span>To</span><input class="input" type="date" name="to" value="${esc(to)}" /></label>
@@ -626,7 +638,8 @@ function renderReports(ctx) {
             <p>${esc(dateOnly())} | ${esc(report.title)}${from || to ? ` | ${esc(from || "start")} - ${esc(to || "today")}` : ""}</p>
           </div>
           ${statGrid(report.summary)}
-          ${table(report.headers, report.rows.map((row) => row.map((value) => esc(String(value ?? "-")))))}
+          ${table(report.headers, previewRows.map((row) => row.map((value) => esc(String(value ?? "-")))))}
+          ${!narrowed && report.rows.length > previewRows.length ? `<p class="muted">Showing ${previewRows.length} of ${report.rows.length}. Apply filters for full detail.</p>` : ""}
           <section class="surface inset">
             <div class="section-head mini"><h3>Smart Summary</h3></div>
             <p>${esc(reportUi.ruleText || report.narrative)}</p>

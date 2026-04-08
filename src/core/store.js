@@ -23,18 +23,82 @@ function mergeState(raw) {
   };
 }
 
-export function loadState() {
+function hasDexie() {
+  return typeof window !== "undefined" && typeof window.Dexie === "function";
+}
+
+function getDb() {
+  if (!hasDexie()) return null;
+  const db = new window.Dexie("edupulse_db");
+  db.version(1).stores({
+    app_state: "key,updatedAt,schemaVersion"
+  });
+  return db;
+}
+
+async function loadFromIndexedDb() {
+  const db = getDb();
+  if (!db) return null;
+  const row = await db.table("app_state").get("primary");
+  if (!row?.state) return null;
+  return mergeState(row.state);
+}
+
+async function saveToIndexedDb(state) {
+  const db = getDb();
+  if (!db) return false;
+  await db.table("app_state").put({
+    key: "primary",
+    schemaVersion: 1,
+    updatedAt: nowIso(),
+    state
+  });
+  return true;
+}
+
+function loadFromLocalStorage() {
   try {
     const raw = localStorage.getItem(DB_KEY);
-    if (!raw) return seedState();
+    if (!raw) return null;
     return mergeState(JSON.parse(raw));
   } catch {
-    return seedState();
+    return null;
   }
 }
 
-export function saveState(state) {
-  localStorage.setItem(DB_KEY, JSON.stringify(state));
+export async function loadState() {
+  const indexed = await loadFromIndexedDb().catch(() => null);
+  if (indexed) return indexed;
+
+  const legacy = loadFromLocalStorage();
+  if (legacy) {
+    await saveToIndexedDb(legacy).catch(() => {});
+    return legacy;
+  }
+
+  const seeded = seedState();
+  await saveToIndexedDb(seeded).catch(() => {});
+  try {
+    localStorage.removeItem(DB_KEY);
+  } catch {
+    // ignore cleanup errors
+  }
+  return seeded;
+}
+
+export async function saveState(state) {
+  const didIndexedSave = await saveToIndexedDb(state).catch(() => false);
+  if (!didIndexedSave) {
+    localStorage.setItem(DB_KEY, JSON.stringify(state));
+  } else {
+    try {
+      // keep lightweight fallback indicator only
+      localStorage.setItem(`${DB_KEY}_last_saved`, nowIso());
+      localStorage.removeItem(DB_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }
 }
 
 export function seedState() {
