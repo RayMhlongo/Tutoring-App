@@ -352,8 +352,7 @@ body {
 .btn,
 .input,
 summary,
-.nav-btn,
-.chip {
+.nav-btn {
   min-height: 36px;
 }
 
@@ -439,6 +438,8 @@ summary,
   flex: 0 0 auto;
   min-width: max-content;
   scroll-snap-align: center;
+  min-height: 30px;
+  line-height: 1;
 }
 
 .chip.active {
@@ -634,6 +635,7 @@ summary {
   .chip {
     font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
+    min-height: 26px;
   }
 }
 
